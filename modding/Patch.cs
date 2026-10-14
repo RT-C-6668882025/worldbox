@@ -35,6 +35,7 @@ class Patch {
   foreach(var name in new[]{"getLoyalty","getCachedLoyalty"})Result(M("City",name),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("GodWorldRuntime","Loyalty")});
   var leader=M("City","setLeader");Prefix(leader,Arg(0),Arg(1),Call("GodWorldRuntime","ChooseLeader"),Instruction.Create(OpCodes.Starg,leader.Parameters[0]));
   foreach(var pair in new[]{new[]{"CityWindow","ShowCity"},new[]{"KingdomWindow","ShowKingdom"},new[]{"UnitWindow","ShowUnit"},new[]{"FamilyWindow","ShowFamily"}})End(M(pair[0],"showStatsRows"),()=>new[]{Arg(0),Call("NativeEconomyUI",pair[1])});
+  End(M("StatsWindow","OnEnable"),()=>new[]{Arg(0),Call("NativeEconomyEditors","Attach")});
   var click=M("KeyValueField","<Awake>b__16_2");original=click.Body.Instructions.First();Prefix(click,Arg(0),Call("NativeEconomyUI","TryClick"),Instruction.Create(OpCodes.Brfalse,original),Instruction.Create(OpCodes.Ret));
   Prefix(M("SavedMap","create"),Call("GodWorldRuntime","Flush"));
   var craft=M("ItemCrafting","craftItem");Prefix(craft,Arg(0),Arg(3),Call("NativeProgression","CraftSkill"),Instruction.Create(OpCodes.Starg,craft.Parameters[3]));
@@ -52,3 +53,4 @@ class Patch {
   foreach(var method in changed)Expand(method);a.Write(args[3]);Console.WriteLine("Patched "+changed.Count+" native methods.");
  }
 }
+
