@@ -1,28 +1,42 @@
-# WorldBox rebellion prototype — 2026-10-14
+# 原生经济扩展 alpha 2
 
-Source APK SHA-256: c39817efa21e539fe61f318dc1ad4050b424c6120ab8ed384d94148f869c4bdc.
-Unity Mono, ARM64 only. Assemblies are in assets/Mono/Managed.zip.
-Assembly-CSharp.dll has 2,908 types and 21,572 methods. No original game binaries or decompiled game source are committed.
+基于 2026-10-14 上传的 ARM64 Unity Mono APK。保留原生地图、操作、人物、建筑、窗口和画风；源游戏二进制与反编译代码不提交本仓库。
 
-## Implemented prototype
-- Rebel manpower slots: floor(adult population * 0.92), within the requested 90–95% range before integer rounding. Original age/culture eligibility and recruitment pacing remain in effect; this is a target/slot limit, not instant forced recruitment.
-- Rebellion defeat: attacker-side total population <= 5 triggers original War.lostWar(main attacker). This currently counts the whole rebel side, not the initial city's population.
-- Capture of an enemy capital by an active rebel kingdom: the captured city becomes the rebel kingdom's capital after the original ownership transfer.
-- Ordinary wars and kingdoms retain original rules.
+## 已实现并注入原生方法
 
-Patched methods: City.updateCityStatus, CityBehCheckCitizenTasks.getPossibleWarriors, War.update, City.finishCapture.
+- 城市及国家统计窗口内：金币/god 余额，双方发行与回收，双向兑换，数量切换，汇率调整。通过原生 KeyValueField 行与点击回调实现。
+- 原生金币仓库加持久化国库储备；原生资源查询、建设扣款及提款都能使用储备，未建仓库的城市也可收到发行金币。
+- 工资从城市国库或商业账户支付；居民消费进入商业账户。货币不通过每年计算凭空生成，发行是独立操作；GOD 在预算或施工需要时按汇率结算，发行量与汇率变化进入价格压力计算。
+- 真实木材/石料/通用金属约束基建、产出与研究；前期投资消耗，基建越成熟，产出、再投资和原生城市建设行动越快。
+- 建造及升级保留原生物料/金币成本，额外施工工资进入商业账户；最初两座基础建筑保留原生自给启动。
+- 九阶段发展指标：原始、石器、农耕、金属、蒸汽、工业、电力、信息、现代；国家达到基建、知识、生产、商业、治理、建筑和人口条件时推进，并解锁已有原生文化能力。
+- 装备按时代限制原生木/石、金属、精良材料；保留原生制造费用与物料，未添加免费装备。
+- 工作、交易、教育、治理及战斗积累能力；生产能力影响制造水平，居民技能影响城市产出/科研/治理，能力影响 god 工资。
+- 原生亲缘、子女、家族结构保持；死亡财富优先转给存活子女，无子女则转给存活家人，无继承人保留为家族资产；死亡者清零，避免重复领取。
+- 战争越久，战争级别、费用及可承担征兵数提高，国王战争属性影响成本；满意度及忠诚下降进入原生忠诚计算，低满意度会影响市长更替与候选人选择。
+- 叛乱征兵目标为成年人口 92%；起事地区人口 <=5、地区灭亡或被夺回即失败；起事地区 ID 随战争保存，已纠正上一版按叛军总人口判定的问题。
+- 解除原生地图预设设备档位限制、100 人城市世界法限制、家族人数/生育/等级/建筑类别/城市物品数量上限，并提高资源仓储容量到其整数表示上限。数组、地形、合法出生位置和溢出检查保留。不是任意无限地图编辑器。
+- 经济/汇率/技能/个人 god/家族财富使用原生自定义存档字段；世界之间的缓存与汇率隔离。
 
-## Validation
-- Helper compiles against actual original managed assemblies (Unity Mono/netstandard).
-- Rewritten method bodies parsed independently using dnfile/dncil; each expected helper call found.
-- 9 isolated helper tests passed; these use stand-in game objects, not a Unity runtime.
-- APK v1/v2/v3 signature verification passed with apksig 8.2.2.
-- Stored native libraries aligned to 16 KiB.
-- No Android emulator or physical-device gameplay test was performed. Boot/loading and game effects remain unverified.
-- Test signing differs from the original signing key, so ordinary overwrite installation is not supported. Back up saves before any uninstall.
+## 尚未完成
 
-## Not implemented
-Economic cycle, currency/exchange controls, graded war intensity, economy UI, and performance optimization. ARM64 presence does not establish performance improvement.
+现代城市与完整工业/蒸汽/电力设备的建筑、武器、设施素材和各自可操作生产链尚未加入。九阶段目前是经济/技术规则，不代表视觉上已建成现代社会。居民商业、研究、治理的独立可视化分支树仍为统计和阈值体系。
 
-## Tool evidence
-REA 6.4.0 inspect-managed-artifact confirms unity-mono/CIL/anycpu. Full member inspection exceeded REA's 64 MiB representation budget; dnfile/dncil provided focused IL inspection. reverse-skill APK/Mono routing supplied the workflow.
+没有 Android 模拟器或实机运行环境，APK 启动、加载程序集和真实窗口渲染尚未验证。性能设计按原生城市更新触发年结，居民统计每城每年轮询至多 64 人，不逐帧扫描全世界居民；尚未测实机帧率。
+
+## 已执行验证
+
+- 扩展程序集使用实际游戏 DLL 编译。
+- 19 项纯经济测试；27 项适配器行为测试（游戏对象替身，不是真实 Unity 运行时）。
+- 28 个调用扩展的原生方法，分支/异常路径栈图检查通过；共修改 33 个原生方法。
+- 原 APK 不变。新 APK 签名验证和存储库对齐另由构建脚本验证。
+
+## 复现
+
+Linux x64，需 Python 3、curl、JRE 17（含 keytool）。其他工具均固定版本及 SHA-256，下载进入指定工作目录，不修改客户端或全局配置。
+
+```bash
+python3 modding/build.py --apk /path/worldbox.apk --tools /path/tools --output /path/build --fetch-tools
+```
+
+保留输出的 `worldbox-test-signing.p12`，后续构建用 `--keystore` 指向同一文件，才能覆盖已安装的这一版测试包。测试签名不能覆盖原作者签名的原版。`build-receipt.json` 记录校验值与验证边界。
