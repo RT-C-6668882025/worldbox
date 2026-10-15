@@ -36,12 +36,13 @@ def main():
  def compile(name,sources,reference,exe=True):
   rsp=out/(name+'.rsp');rsp.write_text('\n'.join(['-nostdlib+','-target:'+('exe' if exe else 'library'),'-out:'+str(out/(name+'.dll'))]+['-r:'+str(r) for r in reference]+[str(ROOT/s) for s in sources]));run(dotnet,csc,'@'+str(rsp))
   if exe:(out/(name+'.runtimeconfig.json')).write_text(json.dumps(runtime))
- compile('RebellionRules',['RebellionRules.cs','EconomyModel.cs','NativeProgression.cs','NativeEconomyUI.cs','NativeEconomyEditors.cs','CurrencyScope.cs','GodWorldRuntime.cs'],list(managed.glob('*.dll')),False)
+ compile('RebellionRules',['RebellionRules.cs','EconomyModel.cs','IntegrationRules.cs','NativeSystems.cs','NativeProgression.cs','NativeEconomyUI.cs','NativeEconomyEditors.cs','CurrencyScope.cs','GodWorldRuntime.cs'],list(managed.glob('*.dll')),False)
  shutil.copy(cecil,out/'Mono.Cecil.dll');compile('Patch',['Patch.cs'],refs+[cecil]);run(dotnet,out/'Patch.dll',managed/'Assembly-CSharp.dll',out/'RebellionRules.dll',managed,out/'Assembly-CSharp.patched.dll')
  compile('VerifyIL',['VerifyIL.cs'],refs+[cecil]);run(dotnet,out/'VerifyIL.dll',out/'Assembly-CSharp.patched.dll',managed)
  shutil.copy(managed/'Newtonsoft.Json.dll',out/'Newtonsoft.Json.dll')
  compile('EconomyTests',['EconomyModel.cs','EconomyModelTests.cs'],refs);run(dotnet,out/'EconomyTests.dll')
- compile('RuntimeTests',['RebellionRules.cs','EconomyModel.cs','NativeProgression.cs','NativeEconomyUI.cs','CurrencyScope.cs','GodWorldRuntime.cs','RuntimeTests.cs'],refs+[out/'Newtonsoft.Json.dll']);run(dotnet,out/'RuntimeTests.dll')
+ compile('IntegrationTests',['IntegrationRules.cs','IntegrationRulesTests.cs'],refs);run(dotnet,out/'IntegrationTests.dll')
+ compile('RuntimeTests',['RebellionRules.cs','EconomyModel.cs','IntegrationRules.cs','NativeProgression.cs','NativeEconomyUI.cs','CurrencyScope.cs','GodWorldRuntime.cs','RuntimeTests.cs'],refs+[out/'Newtonsoft.Json.dll']);run(dotnet,out/'RuntimeTests.dll')
  unsigned=out/'worldbox-economy-native-unsigned.apk';run('python3',ROOT/'repack.py',apk,out/'Assembly-CSharp.patched.dll',out/'RebellionRules.dll',unsigned)
  key=(args.keystore or out/'worldbox-test-signing.p12').resolve()
  if not key.exists():run('keytool','-genkeypair','-alias','worldbox-test','-keyalg','RSA','-keysize','2048','-validity','10000','-keystore',key,'-storepass','android','-keypass','android','-dname','CN=Worldbox Local Test','-storetype','PKCS12')
@@ -54,7 +55,7 @@ def main():
   with zipfile.ZipFile(io.BytesIO(check.read('assets/Mono/Managed.zip'))) as nested:
    if hashlib.sha256(nested.read('RebellionRules.dll')).hexdigest()!=sha(out/'RebellionRules.dll'):raise SystemExit('Embedded helper differs from the verified build.')
  os.replace(temporary,signed)
- receipt={'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':25,'native_adapter_standins':45,'hook_stack_graphs':45,'native_money_routing':True},'android_runtime_tested':False}
+ receipt={'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':25,'native_adapter_standins':54,'integration_policy':39,'hook_stack_graphs':63,'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt,indent=2))
 if __name__=='__main__':main()
 
