@@ -121,13 +121,14 @@ public static class NativeSystems {
  public static void Crowned(Kingdom k,Actor a){if(k==null||a==null||k.king!=a)return;long id=((ActorData)a.getData()).id;if(Number(k.data,"godworld.crown.actor")==id)return;k.data.set("godworld.crown.actor",id);k.data.set("godworld.crown.year",GodWorldRuntime.Year());k.data.set("godworld.crown.governance",NativeProgression.SkillLevel(a,3));}
  public static int Loyalty(City c,int original){var k=GodWorldRuntime.Nation(c);if(k==null||k.king==null)return original;int bonus=Math.Min(10,NativeProgression.SkillLevel(k.king,3))+ (Related(c.leader,k.king)?2:0);return (int)Math.Min(Int32.MaxValue,(long)original+bonus);}
 
- static void ItemEvent(Item item,string type,string owner){
+ static void ItemEvent(Item item,string type,string owner,string name){
   if(item==null)return;var data=Data(item);string signature=type+":"+owner;if(Text(data,"godworld.item.last")==signature)return;
   data.set("godworld.item.last",signature);Increment(data,"godworld.item.transfers",1);
-  string line=GodWorldRuntime.Year()+" "+signature,history=Text(data,"godworld.item.history");var lines=(history.Length==0?line:history+"\n"+line).Split('\n');data.set("godworld.item.history",String.Join("\n",lines.Skip(Math.Max(0,lines.Length-8)).ToArray()));
+  string label=String.IsNullOrEmpty(name)?"未命名":name.Replace('\n',' ');if(label.Length>64)label=label.Substring(0,64);
+  string line=GodWorldRuntime.Year()+" · "+type+"："+label,history=Text(data,"godworld.item.history");var lines=(history.Length==0?line:history+"\n"+line).Split('\n');data.set("godworld.item.history",String.Join("\n",lines.Skip(Math.Max(0,lines.Length-8)).ToArray()));
  }
- public static void ItemOwner(Item item,Actor actor){if(actor!=null)ItemEvent(item,"持有人",((ActorData)actor.getData()).id.ToString());}
- public static void ItemStorage(Item item,City city){if(city!=null)ItemEvent(item,"城市",city.data.id.ToString());}
+ public static void ItemOwner(Item item,Actor actor){if(actor!=null){var d=(ActorData)actor.getData();ItemEvent(item,"持有人",d.id.ToString(),d.name);}}
+ public static void ItemStorage(Item item,City city){if(city!=null)ItemEvent(item,"城市",city.data.id.ToString(),city.data.name);}
  public static void Repaired(Item item){if(item==null)return;Increment(Data(item),"godworld.item.repairs",1);var a=item.getActor();if(a!=null)NativeProgression.SkillWork(a,0,1);}
  public static void Repair(Item item){if(item==null)return;bool needed=item.needRepair();item.fullRepair();if(needed)Repaired(item);}
  public static void Reforged(Item item){if(item==null)return;Increment(Data(item),"godworld.item.reforges",1);var a=item.getActor();if(a!=null)NativeProgression.SkillWork(a,0,2);}
