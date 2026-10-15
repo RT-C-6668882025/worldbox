@@ -16,6 +16,7 @@ public static class NativeEconomyUI {
  static void Balances(StatsWindow w,City c){if(c==null || showRow==null)return;try{Row(w,"金币",Fmt(GodWorldRuntime.GetGold(c)),null);Row(w,"god",Fmt(GodWorldRuntime.GetGod(c)),null);}catch(Exception e){Debug.LogWarning("GodWorld currency balances: "+e.Message);}}
  public static void BindAction(KeyValueField row,UnityAction callback){row.on_click_value=callback;OwnedClick owner;if(!clicks.TryGetValue(row,out owner)){owner=new OwnedClick();clicks.Add(row,owner);}owner.callback=callback;}
  static string Fmt(double n){return n.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture);}
+ public static void Extra(StatsWindow w,string label,string value){if(w==null||showRow==null)return;try{Row(w,label,value,null);}catch(Exception e){Debug.LogWarning("GodWorld native integration UI: "+e.Message);}}
  static void Row(StatsWindow w,string label,string value,Action action){
   KeyValueField row=(KeyValueField)showRow.Invoke(w,new object[]{label,value,null,default(MetaType),0L,false,null,null,null,false});
   // Native row pools reuse objects: replace callbacks every refresh, including read-only rows.
