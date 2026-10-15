@@ -19,6 +19,7 @@ public static class NativeProgression {
  }
  public static int CraftSkill(Actor actor,int original) { return original+SkillLevel(actor,0)/4; }
  public static void AfterCraft(Actor actor,bool success) { if(success)SkillWork(actor,0,3); }
+ public static void AfterReading(Actor actor,int result) { if(result==0)SkillWork(actor,2,3); }
  public static void AfterDelivery(Actor actor,int accepted) { if(accepted>0)SkillWork(actor,0,Math.Min(10,accepted)); }
  public static bool AllowEquipment(Actor actor,EquipmentAsset equipment,City city) {
   if(equipment==null||city==null)return equipment!=null;
