@@ -22,9 +22,14 @@ def helpers(apk):
  if 'mono_dllmap_insert' not in elf_symbols(apk.read('lib/arm64-v8a/libmonosgen-2.0.so')):raise ValueError('Mono lacks dllmap bootstrap API')
  return result
 
-def verify(apk_path,source_path):
+def verify(apk_path,source_path,repairs=None):
  with zipfile.ZipFile(source_path) as source,zipfile.ZipFile(apk_path) as apk:
   original=helpers(source)
+  if repairs is not None:
+   from pathlib import Path
+   with zipfile.ZipFile(io.BytesIO(apk.read('assets/Mono/Managed.zip'))) as managed:
+    for path in Path(repairs).glob('*.dll'):
+     if managed.read(path.name)!=path.read_bytes():raise ValueError('Native import repair not embedded: '+path.name)
   for name,data in original.items():
    if apk.read('lib/arm64-v8a/'+name)!=data:raise ValueError('Native helper mismatch: '+name)
  return {name:hashlib.sha256(data).hexdigest() for name,data in original.items()}

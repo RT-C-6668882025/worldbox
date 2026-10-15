@@ -38,7 +38,7 @@ def main():
   rsp=out/(name+'.rsp');rsp.write_text('\n'.join(['-nostdlib+','-target:'+('exe' if exe else 'library'),'-out:'+str(out/(name+'.dll'))]+['-r:'+str(r) for r in reference]+[str(ROOT/s) for s in sources]));run(dotnet,csc,'@'+str(rsp))
   if exe:(out/(name+'.runtimeconfig.json')).write_text(json.dumps(runtime))
  compile('RebellionRules',['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','NativeUnlocks.cs','BootDiagnostics.cs','NativeOrganizationEditor.cs','IndustrialAppearance.cs','IntegrationRules.cs','NativeSystems.cs','NativeProgression.cs','NativeOrganizations.cs','NativeEconomyUI.cs','NativeEconomyEditors.cs','CurrencyScope.cs','GodWorldRuntime.cs'],list(managed.glob('*.dll')),False)
- shutil.copy(cecil,out/'Mono.Cecil.dll');compile('Patch',['Patch.cs'],refs+[cecil]);run(dotnet,out/'Patch.dll',managed/'Assembly-CSharp.dll',out/'RebellionRules.dll',managed,out/'Assembly-CSharp.patched.dll')
+ shutil.copy(cecil,out/'Mono.Cecil.dll');compile('PatchNativeImports',['PatchNativeImports.cs'],refs+[cecil]);run(dotnet,out/'PatchNativeImports.dll',managed,out/'native-imports');compile('VerifyNativeImports',['VerifyNativeImports.cs'],refs+[cecil]);native_import_log=run(dotnet,out/'VerifyNativeImports.dll',managed,out/'native-imports');compile('Patch',['Patch.cs'],refs+[cecil]);run(dotnet,out/'Patch.dll',managed/'Assembly-CSharp.dll',out/'RebellionRules.dll',managed,out/'Assembly-CSharp.patched.dll')
  compile('VerifyIL',['VerifyIL.cs'],refs+[cecil]);verify_log=run(dotnet,out/'VerifyIL.dll',out/'Assembly-CSharp.patched.dll',managed)
  with zipfile.ZipFile(tools/'ilverify.nupkg') as z:z.extractall(out/'ilverify')
  from verify_types import verify
@@ -51,7 +51,7 @@ def main():
  compile('UnlockTests',['NativeUnlocks.cs','UnlockTests.cs'],refs);unlock_log=run(dotnet,out/'UnlockTests.dll')
  render_sources=['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','IntegrationRules.cs','NativeProgression.cs','NativeOrganizations.cs','NativeEconomyUI.cs','CurrencyScope.cs','GodWorldRuntime.cs','RuntimeTests.cs','OrganizationTests.cs','IndustrialAppearance.cs','RenderTests.cs']
  render_rsp=out/'RenderTests.rsp';render_rsp.write_text('\n'.join(['-nostdlib+','-target:exe','-define:RENDER_TESTS','-main:RenderTests','-out:'+str(out/'RenderTests.dll')]+['-r:'+str(r) for r in refs+[out/'Newtonsoft.Json.dll']]+[str(ROOT/s) for s in render_sources]));run(dotnet,csc,'@'+str(render_rsp));(out/'RenderTests.runtimeconfig.json').write_text(json.dumps(runtime));render_log=run(dotnet,out/'RenderTests.dll',out/'sprite-preview')
- unsigned=out/'worldbox-economy-native-unsigned.apk';run('python3',ROOT/'repack.py',apk,out/'Assembly-CSharp.patched.dll',out/'RebellionRules.dll',unsigned)
+ unsigned=out/'worldbox-economy-native-unsigned.apk';run('python3',ROOT/'repack.py',apk,out/'Assembly-CSharp.patched.dll',out/'RebellionRules.dll',unsigned,out/'native-imports')
  key=(args.keystore or out/'worldbox-test-signing.p12').resolve()
  if not key.exists():run('keytool','-genkeypair','-alias','worldbox-test','-keyalg','RSA','-keysize','2048','-validity','10000','-keystore',key,'-storepass','android','-keypass','android','-dname','CN=Worldbox Local Test','-storetype','PKCS12')
  run('java','-jar',tools/'ecj.jar','-17','-cp',tools/'apksig.jar','-d',out,ROOT/'SignApk.java')
@@ -64,14 +64,14 @@ def main():
    if hashlib.sha256(nested.read('RebellionRules.dll')).hexdigest()!=sha(out/'RebellionRules.dll'):raise SystemExit('Embedded helper differs from the verified build.')
  from runtime_cache import verify_runtime
  from native_support import verify as verify_native_support
- native_support=verify_native_support(temporary,apk)
+ native_support=verify_native_support(temporary,apk,out/'native-imports')
  runtime_id=verify_runtime(temporary,apk,(out/'Assembly-CSharp.patched.dll').read_bytes(),(out/'RebellionRules.dll').read_bytes())
  staged=out/("verified-"+uuid.uuid4().hex+".apk")
  with temporary.open("rb") as source,staged.open("wb") as target:
   shutil.copyfileobj(source,target,1024*1024);target.flush();os.fsync(target.fileno())
  if sha(staged)!=sha(temporary):raise SystemExit("Signed APK transfer hash mismatch.")
  os.replace(staged,signed);signing_dir.cleanup()
- receipt={'android_native_helpers':native_support,'typed_il_validation':typed_validation,'runtime_cache_id':runtime_id,'unity_extension_assembly_registered':True,'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'unlock':int(re.search(r'(\d+) unlock checks passed',unlock_log)[1]),'boot_diagnostics':int(re.search(r'(\d+) boot diagnostic checks passed',boot_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
+ receipt={'core_native_import_repair':{'preserved_method_bodies':int(re.search(r'Preserved (\d+)',native_import_log)[1]),'preserved_native_entrypoint_signatures':int(re.search(r'and (\d+) native',native_import_log)[1]),'embedded_assemblies':{p.name:sha(p) for p in (out/'native-imports').glob('*.dll')}},'android_native_helpers':native_support,'typed_il_validation':typed_validation,'runtime_cache_id':runtime_id,'unity_extension_assembly_registered':True,'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'unlock':int(re.search(r'(\d+) unlock checks passed',unlock_log)[1]),'boot_diagnostics':int(re.search(r'(\d+) boot diagnostic checks passed',boot_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt,indent=2))
 if __name__=='__main__':main()
 

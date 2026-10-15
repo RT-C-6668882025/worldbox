@@ -10,12 +10,12 @@
     "no_new_typed_il_errors": true,
     "original_unsafe_il_baseline": 24
   },
-  "runtime_cache_id": "6ara",
+  "runtime_cache_id": "ouyw",
   "unity_extension_assembly_registered": true,
   "source_sha256": "c39817efa21e539fe61f318dc1ad4050b424c6120ab8ed384d94148f869c4bdc",
-  "output_sha256": "94eb471bd3c59bc1f2bc0148ebf5cf6b84b68b238ddd1d6b4207558ed4293190",
-  "output": "/workspace/scratch/2bfe259058cc/worldbox-native-runtime-fix/worldbox-economy-native-alpha.apk",
-  "helper_sha256": "9e5225a4dd068d1f63fe11c278b7adc6a7302939aa9d64eb6a2ac79f6d6ae89f",
+  "output_sha256": "b64bc183dfef8b9a6195e3fad75f778f2357f41988657baa2a029dd4c0a684cd",
+  "output": "/workspace/scratch/2bfe259058cc/worldbox-native-import-final/worldbox-economy-native-alpha.apk",
+  "helper_sha256": "fa2dac81c0333678c7c077ebf6dca77ab034b4446c8f3f49826b48d1fd29e20b",
   "tests": {
     "economic": 41,
     "native_adapter_standins": 114,
@@ -27,5 +27,15 @@
     "native_money_routing": true,
     "native_systems_routing": true
   },
-  "android_runtime_tested": false
+  "android_runtime_tested": false,
+  "core_native_import_repair": {
+    "preserved_method_bodies": 53089,
+    "preserved_native_entrypoint_signatures": 535,
+    "embedded_assemblies": {
+      "System.Core.dll": "e1ec097d1a05cb3f6c2f4eef26a5ddfc724843654a058be1a100b20915a1e3b3",
+      "System.IO.Compression.dll": "76e87ee45f23ce1fbcd57530920553ab8ddae3664547904ee93daf26c9e18f3d",
+      "System.dll": "c1beaef5e2ee8d4df1f015bdea8e8487a089ef55453c6c37b98680629f4eb90c",
+      "mscorlib.dll": "8b1035b5d13be88cfc19ddcdc42e6a4c12309a82e0dd4891399f4439346fd2c7"
+    }
+  }
 }

@@ -1,3 +1,13 @@
+## 0.4.5 — 直接修正基础程序集原生导入名，并显示加载器错误
+
+实机 0.4.4 截图仍是 System.Native / Interop.Sys / FileSystem.FileExists 异常，证明只追加全局 dllmap 的方案未解决；尚不能从截图分辨是映射优先级、平台分支还是动态链接器失败。
+
+本版将原包 mscorlib.dll、System.dll、System.Core.dll、System.IO.Compression.dll 中相关原生别名直接改为随包 ELF 库名。53,089 个方法体及 535 个原生接口的入口名和签名校验通过，程序集身份保持。构建与安装包校验覆盖这四个修正文件，保留原 Mono 压缩包及五个 ARM64 原生库副本。
+
+Android 启动额外执行 dlopen 全路径加载与所需导出检查，再对 corlib 添加专属映射；首次 File.Exists 失败不再被诊断日志的 catch 静默吞掉。页面显示 platform、nativeLibraryDir、dlopen/导出/映射/文件访问检查状态，失败时带 dlerror。保留报错而不跳过原生初始化。
+
+258 项原有检查通过，新增基础程序集一致性检查通过。无 Android 运行环境，仍需用户手机验证；不将打包或静态检查通过当成启动成功。
+
 ## 0.4.4 — 修复截图确认的 System.Native 加载失败
 
 实机 0.4.3 截图确认 LoadingScreen.Awake 阶段出现 DllNotFoundException: System.Native，随后 Interop.Sys 初始化失败，FileSystem.FileExists 无法执行。

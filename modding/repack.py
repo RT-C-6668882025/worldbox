@@ -3,7 +3,7 @@ from pathlib import Path
 from install_compat import prepare_manifest
 from native_support import helpers
 from runtime_cache import cache_id,patch_bridge,scripting_manifest
-source,assembly,helper,destination=sys.argv[1:]
+source,assembly,helper,destination,native_imports=sys.argv[1:]
 identifier=cache_id(Path(assembly).read_bytes(),Path(helper).read_bytes())
 with zipfile.ZipFile(source) as apk:
  raw=apk.read("assets/Mono/Managed.zip")
@@ -11,6 +11,8 @@ with zipfile.ZipFile(source) as apk:
  with zipfile.ZipFile(io.BytesIO(raw)) as managed,zipfile.ZipFile(out,"w",zipfile.ZIP_DEFLATED) as target:
   for item in managed.infolist():
    data=Path(assembly).read_bytes() if item.filename=="Assembly-CSharp.dll" else managed.read(item)
+   repair=Path(native_imports)/item.filename
+   if repair.is_file():data=repair.read_bytes()
    target.writestr(item,data)
   target.writestr("RebellionRules.dll",Path(helper).read_bytes())
  native_helpers=helpers(apk)
