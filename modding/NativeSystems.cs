@@ -25,10 +25,9 @@ public static class NativeSystems {
  static int Remove(City c,string id,int amount){int before=c.getResourcesAmount(id);c.takeResource(id,amount);return Math.Max(0,before-c.getResourcesAmount(id));}
  static int Add(City c,string id,int amount){int before=c.getResourcesAmount(id);c.addResourcesToRandomStockpile(id,amount);return Math.Max(0,c.getResourcesAmount(id)-before);}
  public static void Earn(Actor actor,int amount){
-  if(actor==null||amount<=0)return;var d=(ActorData)actor.getData();int done;d.get("godworld.apprentice",out done,0);
-  if(done==0){int familySkill=0;foreach(var parent in actor.getParents())if(parent!=null&&parent!=actor)familySkill=Math.Max(familySkill,NativeProgression.SkillLevel(parent,0));int xp;d.get("god_skill_xp_0",out xp,0);if(xp==0)d.set("god_skill_xp_0",Math.Min(25,familySkill*2));d.set("godworld.apprentice",1);}
+  if(actor==null||amount<=0)return;var d=(ActorData)actor.getData();
   if(actor.citizen_job!=null)d.set("godworld.work.job",actor.citizen_job.id);
-  GodWorldRuntime.EarnNativeIncome(actor,IntegrationRules.ConstructionSpeed(amount,NativeProgression.SkillLevel(actor,0)));
+  GodWorldRuntime.EarnNativeIncome(actor,amount);
  }
 
  // Local public redistribution pays freight, not a second commodity purchase.
@@ -49,18 +48,18 @@ public static class NativeSystems {
    n=>Remove(seller,asset.id,n),n=>Add(buyer,asset.id,n),n=>Remove(buyer,asset.id,n),n=>Restore(seller,asset.id,n),
    n=>{int cost=n*unit;if(!GodWorldRuntime.TryDebitPublic(buyer,cost))return false;
     GodWorldRuntime.CreditBusiness(seller,n*price+(carrier==null?n*freight:0));
-    if(carrier!=null&&freight>0){carrier.addLoot(n*freight);NativeProgression.SkillWork(carrier,1,1);}return true;});
+    if(carrier!=null&&freight>0){carrier.addLoot(n*freight);NativeProgression.CompletedWork(carrier,1,1);}return true;});
   if(delivered>0){Increment(seller.data,"godworld.goods.exported",delivered);Increment(buyer.data,"godworld.goods.imported",delivered);}
   return delivered;
  }
- public static void Supply(City from,City to,CityStorageSlot slot){if(slot!=null){int n=(int)Math.Min(Int32.MaxValue,slot.asset.supply_give*Math.Max(1,GodWorldRuntime.State(from).logistics));TradeGoods(from,to,slot.asset,n,null);NativeLifecycle.IndustrialTrade(from,to,null);}}
+ public static void Supply(City from,City to,CityStorageSlot slot){if(slot!=null){int n=(int)Math.Min(Int32.MaxValue,slot.asset.supply_give*Math.Max(1,GodWorldRuntime.State(from).logistics)*(1+NativeOrganizations.CityBonus(from,"commerce")));TradeGoods(from,to,slot.asset,n,null);NativeLifecycle.IndustrialTrade(from,to,null);}}
  public static void BoatTrade(Actor boat){
   if(boat==null||BoatTarget==null)return;var dock=BoatTarget.GetValue(boat) as Building;if(dock==null)return;var home=boat.getHomeBuilding();var from=home==null?boat.getCity():home.getCity();var to=dock.getCity();if(from==null||to==null||from==to)return;
   var d=(ActorData)boat.getData();string key=GodWorldRuntime.Year()+":"+to.data.id;
   if(Text(d,"godworld.lastDockTrade")==key)return;if(NativeLifecycle.IndustrialTrade(from,to,boat)>0){d.set("godworld.lastDockTrade",key);return;}
   foreach(var r in AssetManager.resources.list){
    if(r.id=="gold"||r.trade_cost<=0&&r.money_cost<=0&&r.loot_value<=0||from.getResourcesAmount(r.id)<=Math.Max(2,r.trade_bound))continue;
-   int n=Math.Min(Math.Max(1,r.trade_give),Math.Max(0,from.getResourcesAmount(r.id)-Math.Max(2,r.trade_bound)));
+   int n=Math.Min(NativeOrganizations.Scale(Math.Max(1,r.trade_give),NativeOrganizations.CityBonus(from,"commerce")),Math.Max(0,from.getResourcesAmount(r.id)-Math.Max(2,r.trade_bound)));
    if(TradeGoods(from,to,r,n,boat)>0){d.set("godworld.lastDockTrade",key);return;}
   }
  }
@@ -78,7 +77,7 @@ public static class NativeSystems {
   if(id!="gold"&&r!=null){int fee=ProcessingCost(r,c);if(!GodWorldRuntime.TryDebitPublic(c,fee)){Remove(c,id,received);foreach(var ingredient in r.ingredients??new string[0])Restore(c,ingredient,Math.Max(0,r.ingredients_amount));return 0;}GodWorldRuntime.CreditBusiness(c,fee);}
   Increment(c.data,"godworld.goods.processed",received);NativeLifecycle.Delivered(c,received);return received;
  }
- public static int Construction(Actor a,int original){int speed=IntegrationRules.ConstructionSpeed(original,NativeProgression.SkillLevel(a,0));var s=a==null?null:GodWorldRuntime.State(a.getCity());return speed<=0||s==null?speed:(int)Math.Min(Int32.MaxValue,Math.Ceiling(speed*(1+Math.Min(2,s.machinery*.01)+(s.power>0?.25:0))));}
+ public static int Construction(Actor a,int original){int speed=NativeOrganizations.Scale(original,NativeOrganizations.Bonus(a,"production"));var s=a==null?null:GodWorldRuntime.State(a.getCity());return speed<=0||s==null?speed:(int)Math.Min(Int32.MaxValue,Math.Ceiling(speed*(1+Math.Min(2,s.machinery*.01)+(s.power>0?.25:0))));}
 
  static Fund ReadFund(Alliance a){try{string raw=Text(Data(a),"godworld.alliance.fund");var f=raw.Length==0?new Fund():JsonConvert.DeserializeObject<Fund>(raw);if(f==null||f.gold<0||f.gold>Int32.MaxValue||f.claims==null)return new Fund();return f;}catch{return new Fund();}}
  static void SaveFund(Alliance a,Fund f){Data(a).set("godworld.alliance.fund",JsonConvert.SerializeObject(f));}
@@ -111,15 +110,15 @@ public static class NativeSystems {
   var k=GodWorldRuntime.Nation(city);if(k==null)return;var reserve=WorldReserve();string key="godworld.allianceRefund."+k.data.id;long held=Number(reserve,key);int pay=(int)Math.Min(held,Int32.MaxValue-GodWorldRuntime.GetGold(city));if(pay>0&&GodWorldRuntime.CreditPublic(city,pay))reserve.set(key,held-pay);
  }
 
- static double CandidateScore(Actor a,Actor preferred,Actor previous){return IntegrationRules.HeirScore(NativeProgression.SkillLevel(a,3),GodWorldRuntime.Attribute(a,"stewardship"),a==preferred,Related(a,previous));}
+ static double CandidateScore(Actor a,Actor preferred,Actor previous){return IntegrationRules.HeirScore(NativeProgression.Ability(a,3),GodWorldRuntime.Attribute(a,"stewardship"),a==preferred,Related(a,previous));}
  public static Actor RoyalHeir(Kingdom k,Actor previous,Actor original){
   if(k==null||original==null||original.clan==null)return original;Actor best=original;double score=CandidateScore(original,original,previous);
   foreach(var a in original.clan.units){if(a==null||a==previous||!original.clan.fitToRule(a,k))continue;double s=CandidateScore(a,original,previous);if(s>score){score=s;best=a;}}
   return best;
  }
  public static Actor LeaderHeir(Kingdom k,Actor original){if(k==null||original==null)return original;Actor best=original;double score=CandidateScore(original,original,null);foreach(var c in k.cities){var a=c.leader;if(a==null||!a.isUnitFitToRule())continue;double s=CandidateScore(a,original,null);if(s>score){score=s;best=a;}}return best;}
- public static void Crowned(Kingdom k,Actor a){if(k==null||a==null||k.king!=a)return;long id=((ActorData)a.getData()).id;if(Number(k.data,"godworld.crown.actor")==id)return;k.data.set("godworld.crown.actor",id);k.data.set("godworld.crown.year",GodWorldRuntime.Year());k.data.set("godworld.crown.governance",NativeProgression.SkillLevel(a,3));}
- public static int Loyalty(City c,int original){var k=GodWorldRuntime.Nation(c);if(k==null||k.king==null)return original;int bonus=Math.Min(10,NativeProgression.SkillLevel(k.king,3))+ (Related(c.leader,k.king)?2:0);return (int)Math.Min(Int32.MaxValue,(long)original+bonus);}
+ public static void Crowned(Kingdom k,Actor a){if(k==null||a==null||k.king!=a)return;long id=((ActorData)a.getData()).id;if(Number(k.data,"godworld.crown.actor")==id)return;k.data.set("godworld.crown.actor",id);k.data.set("godworld.crown.year",GodWorldRuntime.Year());k.data.set("godworld.crown.governance",NativeProgression.Ability(a,3));}
+ public static int Loyalty(City c,int original){var k=GodWorldRuntime.Nation(c);if(k==null||k.king==null)return original;int bonus=Math.Min(10,NativeProgression.Ability(k.king,3))+ (Related(c.leader,k.king)?2:0);return NativeOrganizations.Governance(c,(int)Math.Min(Int32.MaxValue,(long)original+bonus));}
 
  static void ItemEvent(Item item,string type,string owner,string name){
   if(item==null)return;var data=Data(item);string signature=type+":"+owner;if(Text(data,"godworld.item.last")==signature)return;
@@ -129,10 +128,10 @@ public static class NativeSystems {
  }
  public static void ItemOwner(Item item,Actor actor){if(actor!=null){var d=(ActorData)actor.getData();ItemEvent(item,"持有人",d.id.ToString(),d.name);}}
  public static void ItemStorage(Item item,City city){if(city!=null)ItemEvent(item,"城市",city.data.id.ToString(),city.data.name);}
- public static void Repaired(Item item){if(item==null)return;Increment(Data(item),"godworld.item.repairs",1);var a=item.getActor();if(a!=null)NativeProgression.SkillWork(a,0,1);}
+ public static void Repaired(Item item){if(item==null)return;Increment(Data(item),"godworld.item.repairs",1);var a=item.getActor();if(a!=null)NativeProgression.CompletedWork(a,0,1);}
  public static void Repair(Item item){if(item==null)return;bool needed=item.needRepair();item.fullRepair();if(needed)Repaired(item);}
- public static void Reforged(Item item){if(item==null)return;Increment(Data(item),"godworld.item.reforges",1);var a=item.getActor();if(a!=null)NativeProgression.SkillWork(a,0,2);}
- public static int Wear(int damage,Item item){if(item==null)return damage;return IntegrationRules.Wear(damage,NativeProgression.SkillLevel(item.getActor(),4));}
+ public static void Reforged(Item item){if(item==null)return;Increment(Data(item),"godworld.item.reforges",1);var a=item.getActor();if(a!=null)NativeProgression.CompletedWork(a,0,2);}
+ public static int Wear(int damage,Item item){if(item==null)return damage;return NativeOrganizations.Durability(item.getActor(),IntegrationRules.Wear(damage,NativeProgression.Ability(item.getActor(),4)));}
  public static void GenomeChanged(Subspecies s){if(s!=null)Increment(Data(s),"godworld.genome.revisions",1);}
 
  static object Selected(StatsWindow window){var m=window.GetType().GetMethod("get_meta_object",Flags);return m==null?null:m.Invoke(window,null);}

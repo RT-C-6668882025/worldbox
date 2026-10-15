@@ -1,3 +1,5 @@
+> 组织版本更新：自建个人技能经验已停用；人物能力读取原生属性。组织排名、行内编辑与可恢复原生税率覆盖以 STATUS.md 为准。
+
 > 历史 API 核查记录。当前规则已改为全装备/个人特质解锁、发展只支付金币；早期材料时代门槛和 GOD 自动支付描述已被 STATUS.md 的最新规则取代。
 
 # Native progression integration (verified original managed DLL)

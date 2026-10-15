@@ -8,7 +8,7 @@ using UnityEngine;
 // Runtime effects use native work, citizens, jobs, wars and save objects.
 public static class NativeLifecycle {
  const BindingFlags Flags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
- sealed class Scan {public Actor[] actors;public int cursor,year,living,working,adults;public int[] sectors=new int[4];public double coins,gods,pending;public double[] skills=new double[5];}
+ sealed class Scan {public Actor[] actors;public int cursor,year,living,working,adults;public int[] sectors=new int[4];public double coins,gods,pending;public double[] nativeAttributes=new double[5];}
  sealed class NationFunds {public GodWallet wallet=new GodWallet();public int year=Int32.MinValue;}
  static readonly Dictionary<City,Scan> scans=new Dictionary<City,Scan>();
  sealed class TargetCache {public float until;public int target;}
@@ -23,7 +23,7 @@ public static class NativeLifecycle {
  public static bool Law(string id){var f=LawsField;var laws=f==null||World.world==null?null:f.GetValue(World.world) as WorldLaws;return laws==null||laws.dict==null||!laws.dict.ContainsKey(id)||laws.isEnabled(id);}
  static void Reset(){var f=MapField;object identity=World.world==null?null:f.GetValue(World.world);if(!System.Object.ReferenceEquals(identity,mapIdentity)){scans.Clear();targets.Clear();mapIdentity=identity;}}
  public static double PersonalGod(Actor a){return a==null?0:Read(Data(a),"godworld.personal.god");}
- public static double GodCapacity(Actor a){return a==null?0:LifecyclePolicy.HoldingCapacity(NativeProgression.SkillLevel(a,0),NativeProgression.SkillLevel(a,1),NativeProgression.SkillLevel(a,2),NativeProgression.SkillLevel(a,3),NativeProgression.SkillLevel(a,4));}
+ public static double GodCapacity(Actor a){return a==null?0:LifecyclePolicy.HoldingCapacity(NativeProgression.Ability(a,0),NativeProgression.Ability(a,1),NativeProgression.Ability(a,2),NativeProgression.Ability(a,3),NativeProgression.Ability(a,4));}
  public static bool IssuePersonal(Actor a,bool god,double delta){
   if(a==null||!a.isAlive()||Double.IsNaN(delta)||Double.IsInfinity(delta))return false;var d=(ActorData)a.getData();
   if(god){double next=PersonalGod(a)+delta;if(next<0||next>GodCapacity(a))return false;Write(d,"godworld.personal.god",next);return true;}
@@ -54,7 +54,7 @@ public static class NativeLifecycle {
   Reset();if(city!=null&&!scans.ContainsKey(city)){int pending=Integer(city.data,"godworld.payroll.pending",Int32.MinValue);if(pending!=Int32.MinValue)StartYear(city,pending);}
   Scan scan;if(city==null||!scans.TryGetValue(city,out scan))return;var s=GodWorldRuntime.State(city);int stop=Math.Min(scan.actors.Length,scan.cursor+64);
   for(;scan.cursor<stop;scan.cursor++){
-   var a=scan.actors[scan.cursor];if(a==null||!a.isAlive()||a.getCity()!=city)continue;var d=(ActorData)a.getData();scan.living++;for(int role=0;role<5;role++)scan.skills[role]+=NativeProgression.SkillLevel(a,role);if(!a.isBaby()){scan.adults++;if(Integer(d,"godworld.employed.year",Int32.MinValue)>=scan.year-1){scan.working++;int sector=Integer(d,"godworld.employer.sector");scan.sectors[Math.Max(0,Math.Min(3,sector))]++;}}
+   var a=scan.actors[scan.cursor];if(a==null||!a.isAlive()||a.getCity()!=city)continue;var d=(ActorData)a.getData();scan.living++;for(int role=0;role<5;role++)scan.nativeAttributes[role]+=NativeProgression.Ability(a,role);if(!a.isBaby()){scan.adults++;if(Integer(d,"godworld.employed.year",Int32.MinValue)>=scan.year-1){scan.working++;int sector=Integer(d,"godworld.employer.sector");scan.sectors[Math.Max(0,Math.Min(3,sector))]++;}}
    if(Integer(d,"godworld.payroll.year",Int32.MinValue)<scan.year){
     d.set("godworld.payroll.year",scan.year);
     int debt=(int)Math.Min(Int32.MaxValue,Read(d,"godworld.wage.owed"));if(debt>0){int repaid=GodWorldRuntime.FundNativeIncome(a,debt);a.addLoot(repaid);Write(d,"godworld.wage.owed",debt-repaid);s.wageArrears=Math.Max(0,s.wageArrears-repaid);}
@@ -73,7 +73,7 @@ public static class NativeLifecycle {
   }
   if(scan.cursor<scan.actors.Length)return;
   s.residentMoney=scan.coins;s.pendingIncome=scan.pending;s.circulatingGold=scan.coins+scan.pending;s.circulatingGod=scan.gods;s.employed=scan.working;s.sectorWorkers=scan.sectors;s.unemployment=scan.adults>0?1-scan.working/(double)scan.adults:0;
-  if(scan.living>0){s.production=scan.skills[0]/scan.living;s.commerce=scan.skills[1]/scan.living;s.research=scan.skills[2]/scan.living;s.governance=scan.skills[3]/scan.living;s.combat=scan.skills[4]/scan.living;}
+  if(scan.living>0){s.production=scan.nativeAttributes[0]/scan.living;s.commerce=scan.nativeAttributes[1]/scan.living;s.research=scan.nativeAttributes[2]/scan.living;s.governance=scan.nativeAttributes[3]/scan.living;s.combat=scan.nativeAttributes[4]/scan.living;}
   s.foodCoverage=!Law("world_law_hunger")?1:Math.Min(1,city.getTotalFood()/(double)Math.Max(1,city.getPopulationPeople()));
   city.data.set("godworld.payroll.scan.year",scan.year);city.data.set("godworld.payroll.pending",Int32.MinValue);scans.Remove(city);GodWorldRuntime.Dirty(city);FinishYear(city,scan.year);
  }
@@ -126,7 +126,7 @@ public static class NativeLifecycle {
  public static bool CanRecruit(City c,Actor a){if(c==null||a==null||!a.isAlive()||a.isBaby()||a.isKing()||a.isCityLeader()||a.is_profession_warrior)return false;MilitaryJobs(c);if(c.countWarriors()>=c.status.warrior_slots)return false;bool rebel=RebellionRules.IsRebel(GodWorldRuntime.Nation(c));return rebel||c.culture==null||!(a.isSexFemale()&&c.culture.hasTrait("conscription_male_only")||a.isSexMale()&&c.culture.hasTrait("conscription_female_only"));}
  public static bool CanRemain(City c,Actor a){if(c==null||a==null)return false;int target=Target(c);c.status.warrior_slots=target;bool keep=c.countWarriors()<=target;if(!keep&&!a.isKing()&&!a.isCityLeader())a.stopBeingWarrior();return keep;}
  public static bool CanDeploy(City c){if(c==null||!c.hasArmy())return false;int current=c.army.countUnits();var k=GodWorldRuntime.Nation(c);int target=Target(c);return current>=LifecyclePolicy.DeployThreshold(target,current,k!=null&&RebellionRules.IsRebel(k))&&current>0&&target>0;}
- public static void AfterRecruit(City c){if(c==null)return;var f=typeof(City).GetField("_timer_warrior",Flags);double speed=RebellionRules.IsRebel(GodWorldRuntime.Nation(c))?8:1+Math.Min(5,GodWorldRuntime.State(c).warLevel*.25);f.SetValue(c,Math.Max(.25f,(float)f.GetValue(c)/(float)speed));}
+ public static void AfterRecruit(City c){if(c==null)return;var f=typeof(City).GetField("_timer_warrior",Flags);double speed=(RebellionRules.IsRebel(GodWorldRuntime.Nation(c))?8:1+Math.Min(5,GodWorldRuntime.State(c).warLevel*.25))*(1+NativeOrganizations.CityBonus(c,"combat"));f.SetValue(c,Math.Max(.25f,(float)f.GetValue(c)/(float)speed));}
  public static bool WarNeeded(Kingdom k,bool original){if(original||k==null||!Law("world_law_diplomacy")||k.getWars(false).Any(w=>!w.hasEnded()))return original;int done=Integer(k.data,"godworld.lastFiscalWar",Int32.MinValue);if(done!=Int32.MinValue&&GodWorldRuntime.Year()-done<8)return false;return k.cities.Any(c=>c!=null&&GodWorldRuntime.State(c).crisis>=45)&&k.countTotalWarriors()>0;}
  public static void WarCreated(War w){if(w==null)return;var a=w.getMainAttacker();if(a!=null)a.data.set("godworld.lastFiscalWar",GodWorldRuntime.Year());if(w.getAsset().rebellion){var rebel=w.getMainDefender();if(rebel!=null&&rebel.capital!=null){w.data.set("godworld.rebel.originCity",rebel.capital.data.id);w.data.set("godworld.rebel.originVersion",2);}}}
 
@@ -150,6 +150,7 @@ public static class NativeLifecycle {
   if(era>=7&&s.laboratory==0&&s.components>=5&&Invest(c,5,10,10,wage*50)){s.components-=5;s.laboratory=1;}
   // Power is a per-year service: unused capacity expires, fuel is consumed.
   s.power=0;
+  units=NativeOrganizations.Scale(units,NativeOrganizations.CityBonus(c,"production"));
   int n=Math.Min(units,c.getResourcesAmount("wood")/2);
   if(era>=3)Manufacture(c,n,x=>Remove(c,"wood",x*2),x=>s.coal+=x);
   n=(int)Math.Min(units,Math.Min(s.coal,c.getResourcesAmount("common_metals")/2));
@@ -160,7 +161,7 @@ public static class NativeLifecycle {
   if(era>=6&&s.powerPlant>0)Manufacture(c,n,x=>s.coal-=x,x=>s.power+=x*8);
   n=(int)Math.Min(units,Math.Min(s.steel,Math.Min(s.machinery,s.power/2)));
   if(era>=6&&s.factory>0)Manufacture(c,n,x=>{s.steel-=x;s.machinery-=x;s.power-=x*2;},x=>s.components+=x);
-  if(era>=7&&s.laboratory>0&&s.components>0&&s.power>0){double use=Math.Min(units,Math.Min(s.components,s.power));s.components-=use;s.power-=use;s.knowledge+=use*.5;}
+  if(era>=7&&s.laboratory>0&&s.components>0&&s.power>0){double use=Math.Min(units,Math.Min(s.components,s.power));s.components-=use;s.power-=use;s.knowledge+=use*.5*(1+NativeOrganizations.CityBonus(c,"research"));}
   n=(int)Math.Min(units,s.steel);if(era>=5&&s.factory>0)Manufacture(c,n,x=>s.steel-=x,x=>s.ammunition+=x*5);
   // Real investment creates capacity; idle/unfunded firms shrink in the annual model.
   if(s.business.gold>wage*units*4&&Materials(c,2,1,1)){double spend=Math.Min(s.business.gold*.1,wage*Math.Max(1,units));s.business.gold-=spend;s.households.gold+=spend;Remove(c,"wood",2);Remove(c,"stone",1);Remove(c,"common_metals",1);s.firmCapacity+=Math.Max(1,spend/wage*.1);s.investmentPaid=spend;}

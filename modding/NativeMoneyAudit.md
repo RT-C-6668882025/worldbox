@@ -8,7 +8,7 @@ Scope: the managed assemblies embedded in the installed-compatible Alpha 3.1 APK
 - `BehActorGiveTax.payTaxToLeader`: split pending income using the kingdom's local tax rate; actor receives the remainder as money, leader receives tax as pending income; clear the actor's pending income.
 - `payTributeToKing`: give tribute to the king as pending income, put half the remaining amount (integer truncation) into the city gold stockpile, credit the rest to the leader personally; clear pending income.
 - Kings, and residents without a leader, settle their pending income using `takeAllOwnLoot`.
-- Kingdom tax rates are recalculated from native base settings and kingdom traits. The extension does not replace these rates or tax distribution.
+- Kingdom tax rates default to native base settings and kingdom traits. The organization editor can override each rate (0–100%, -1 restores native); original tax distribution and settlement remain intact.
 - `addMoney` is a generic credit operation used by settlement and gifts, not a salary event. Stolen/killed actors' money can also become loot and later be settled.
 - `getMoneyForGift` computes an amount but does not debit the donor in the inspected native flow. The adapter now explicitly transfers that money.
 - Actual food, crafting, equipment repair and fireworks call `spendMoney`; plots charge at normal creation but can intentionally skip payment when forced.

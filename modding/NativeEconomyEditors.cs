@@ -11,6 +11,10 @@ public static class NativeEconomyEditors {
    if(parent!=null)AttachAt(window,parent);
   }catch(Exception e){Debug.LogWarning("GodWorld editor attach: "+e);}
  }
+ public static void AttachOrganization(StatsWindow w,Transform target){
+  if(target==null)return;var old=target.Find("godworld_organization_editor");if(old!=null){old.GetComponent<GodOrganizationEditor>().Bind(w);old.gameObject.SetActive(!old.gameObject.activeSelf);return;}
+  var go=new GameObject("godworld_organization_editor",typeof(RectTransform));go.SetActive(false);go.transform.SetParent(target,false);go.transform.SetAsLastSibling();var layout=go.AddComponent<VerticalLayoutGroup>();layout.childControlWidth=true;layout.childControlHeight=true;layout.childForceExpandWidth=true;layout.childForceExpandHeight=false;layout.spacing=2;go.AddComponent<ContentSizeFitter>().verticalFit=ContentSizeFitter.FitMode.PreferredSize;go.AddComponent<GodOrganizationEditor>().Bind(w);go.SetActive(true);
+ }
  public static void AttachAt(StatsWindow w,Transform parent){
   var found=parent.Find("godworld_currency_editor");if(found!=null){found.GetComponent<GodCurrencyEditorPanel>().Bind(w);return;}
   var go=new GameObject("godworld_currency_editor",typeof(RectTransform));go.SetActive(false);go.transform.SetParent(parent,false);go.transform.SetAsFirstSibling();

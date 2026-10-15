@@ -9,3 +9,5 @@
 - [原始安装包](https://github.com/RT-C-6668882025/worldbox/releases/download/apk-upload-20261014/worldbox.apk)
 
 动物、生物、怪物图鉴及个人/亚种词条已统一解锁，保留原生互斥和适用性规则。
+
+九类原生组织支持综合实力排名与可编辑加成，组织统计页点击“编辑组织”。个人能力统一使用原生属性和特质，取消额外技能经验体系。详见 [实现状态](modding/STATUS.md)。

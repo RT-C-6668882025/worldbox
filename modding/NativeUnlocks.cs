@@ -1,9 +1,11 @@
 using System;
 using System.Reflection;
+using System.Linq;
+using System.Collections;
 // Unlock editor availability without granting free equipment or completing achievements.
 public static class NativeUnlocks {
  const BindingFlags Flags=BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
- public static bool Target(BaseUnlockableAsset asset){return asset is ItemAsset||asset is ActorTrait||asset is SubspeciesTrait||asset is ActorAsset;}
+ public static bool Target(BaseUnlockableAsset asset){return asset!=null&&!asset.isTemplateAsset()&&(asset is ItemAsset||asset is ActorTrait||asset is SubspeciesTrait||asset is ActorAsset||new[]{"CultureTrait","LanguageTrait","ClanTrait","KingdomTrait","ReligionTrait"}.Contains(asset.GetType().Name));}
  static void Open(BaseUnlockableAsset asset){if(asset==null||asset.isTemplateAsset())return;asset.unlocked_with_achievement=false;asset.needs_to_be_explored=false;asset.achievement_id="";
   foreach(var name in new[]{"can_be_given","can_be_removed"}){var f=asset.GetType().GetField(name,Flags);if(f!=null&&f.FieldType==typeof(bool))f.SetValue(asset,true);}
   var item=asset as ItemAsset;if(item!=null)item.mod_can_be_given=true;
@@ -15,6 +17,7 @@ public static class NativeUnlocks {
   if(AssetManager.subspecies_traits!=null)foreach(var asset in AssetManager.subspecies_traits.list){Open(asset);if(progress!=null&&!asset.isTemplateAsset())progress.unlocked_traits_subspecies.Add(asset.id);}
   if(AssetManager.actor_library!=null)foreach(var asset in AssetManager.actor_library.list){if(asset.isTemplateAsset())continue;Open(asset);if(!asset.is_boat){asset.can_receive_traits=true;asset.can_edit_traits=true;asset.can_be_inspected=true;}if(progress!=null)progress.unlocked_actors.Add(asset.id);}
   if(AssetManager.items!=null)foreach(var asset in AssetManager.items.list){Open(asset);if(progress!=null&&!asset.isTemplateAsset())progress.unlocked_equipment.Add(asset.id);}
+  foreach(var pair in new[]{new[]{"culture_traits","unlocked_traits_culture"},new[]{"language_traits","unlocked_traits_language"},new[]{"clan_traits","unlocked_traits_clan"},new[]{"kingdoms_traits","unlocked_traits_kingdom"},new[]{"religion_traits","unlocked_traits_religion"}}){var libraryField=typeof(AssetManager).GetField(pair[0],BindingFlags.Static|BindingFlags.Public);var library=libraryField==null?null:libraryField.GetValue(null);if(library==null)continue;var listField=library.GetType().GetField("list",Flags);var list=listField==null?null:listField.GetValue(library) as IEnumerable;if(list==null)continue;var progressField=typeof(GameProgressData).GetField(pair[1],Flags);var unlocked=progress==null||progressField==null?null:progressField.GetValue(progress) as System.Collections.Generic.HashSet<string>;if(unlocked==null&&progress!=null&&progressField!=null){unlocked=new System.Collections.Generic.HashSet<string>();progressField.SetValue(progress,unlocked);}foreach(var item in list){var asset=item as BaseUnlockableAsset;if(asset==null||asset.isTemplateAsset())continue;Open(asset);if(unlocked!=null)unlocked.Add(asset.id);}}
   if(AssetManager.items_modifiers!=null)foreach(var asset in AssetManager.items_modifiers.list)Open(asset);
  }
  public static void EquipmentPools(ItemLibrary library){Apply();foreach(var asset in library.pot_weapon_assets_all)if(!library.pot_weapon_assets_unlocked.Contains(asset))library.pot_weapon_assets_unlocked.Add(asset);
