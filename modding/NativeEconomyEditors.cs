@@ -17,8 +17,8 @@ public static class NativeEconomyEditors {
  }
  public static void AttachAt(StatsWindow w,Transform parent){
   var found=parent.Find("godworld_currency_editor");if(found!=null){found.GetComponent<GodCurrencyEditorPanel>().Bind(w);return;}
-  var go=new GameObject("godworld_currency_editor",typeof(RectTransform));go.SetActive(false);go.transform.SetParent(parent,false);go.transform.SetAsFirstSibling();
-  var layout=go.AddComponent<VerticalLayoutGroup>();layout.childControlWidth=true;layout.childControlHeight=true;layout.childForceExpandWidth=true;layout.childForceExpandHeight=false;layout.spacing=2;
+  var go=new GameObject("godworld_currency_editor",typeof(RectTransform));go.SetActive(false);go.transform.SetParent(parent,false);go.transform.SetAsFirstSibling();NativeCurrencyControls.Fit(go.transform,parent);
+  var layout=go.AddComponent<VerticalLayoutGroup>();layout.childControlWidth=true;layout.childControlHeight=true;layout.childForceExpandWidth=true;layout.childForceExpandHeight=false;layout.spacing=1;
   var fit=go.AddComponent<ContentSizeFitter>();fit.verticalFit=ContentSizeFitter.FitMode.PreferredSize;
   go.AddComponent<GodCurrencyEditorPanel>().Bind(w);go.SetActive(true);
  }
@@ -30,11 +30,11 @@ public sealed class GodCurrencyEditorPanel:MonoBehaviour {
  public void Bind(StatsWindow w){window=w;if(rows.Count>0)Refresh();}
  void OnEnable(){try{if(rows.Count==0)Create();Refresh();}catch(Exception e){Debug.LogWarning("GodWorld editor UI: "+e);}}
  void Update(){if(Time.unscaledTime<nextRefresh)return;nextRefresh=Time.unscaledTime+1;try{Refresh();}catch(Exception e){Debug.LogWarning("GodWorld editor refresh: "+e);}}
- KeyValueField Add(string label,string value,Action action=null){var prefab=Resources.Load<GameObject>("ui/KeyValueFieldStats");if(prefab==null)throw new Exception("Native currency row prefab missing");var obj=UnityEngine.Object.Instantiate(prefab,transform,false);obj.name="godworld_currency_"+rows.Count;var row=obj.GetComponent<KeyValueField>();var size=obj.GetComponent<LayoutElement>()??obj.AddComponent<LayoutElement>();size.minHeight=36;size.preferredHeight=36;if(row.icon!=null)row.icon.gameObject.SetActive(false);
-  foreach(var text in new[]{row.name_text,row.value}){text.supportRichText=false;text.resizeTextForBestFit=true;text.resizeTextMinSize=9;text.resizeTextMaxSize=14;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;}
+ KeyValueField Add(string label,string value,Action action=null){var prefab=Resources.Load<GameObject>("ui/KeyValueFieldStats");if(prefab==null)throw new Exception("Native currency row prefab missing");var obj=UnityEngine.Object.Instantiate(prefab,transform,false);obj.name="godworld_currency_"+rows.Count;var row=obj.GetComponent<KeyValueField>();var size=obj.GetComponent<LayoutElement>()??obj.AddComponent<LayoutElement>();size.minHeight=14;size.preferredHeight=14;size.flexibleHeight=0;if(row.icon!=null)row.icon.gameObject.SetActive(false);
+  foreach(var text in new[]{row.name_text,row.value}){text.supportRichText=false;text.resizeTextForBestFit=true;text.resizeTextMinSize=6;text.resizeTextMaxSize=8;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;}
   row.name_text.text=label;row.value.text=value;NativeEconomyUI.BindAction(row,action==null?null:(UnityEngine.Events.UnityAction)(()=>Run(action)));rows.Add(row);obj.SetActive(true);return row;
  }
- void Create(){Add("货币","");Add("切换币种","",()=>{godSelected=!godSelected;status="已选择"+(godSelected?"GOD":"金币");});Add("余额","");var row=Add("自定义数量","1000");amountInput=row.value.gameObject.AddComponent<InputField>();amountInput.textComponent=row.value;amountInput.text="1000";amountInput.contentType=InputField.ContentType.IntegerNumber;amountInput.lineType=InputField.LineType.SingleLine;amountInput.characterLimit=10;row.value.raycastTarget=true;
+ void Create(){Add("货币","");Add("切换币种","",()=>{godSelected=!godSelected;status="已选择"+(godSelected?"GOD":"金币");});Add("余额","");var row=Add("自定义数量","1000");amountInput=NativeCurrencyControls.Input(row,"1000",true);
   Add("发行","发行 ▸",()=>Apply(godSelected?CurrencyScope.Operation.MintGod:CurrencyScope.Operation.MintGold,Amount()));
   Add("回收","回收 ▸",()=>Apply(godSelected?CurrencyScope.Operation.BurnGod:CurrencyScope.Operation.BurnGold,Amount()));
   Add("操作结果",status);Add("兑换","展开 ▸",()=>exchangeOpen=!exchangeOpen);
