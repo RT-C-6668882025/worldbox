@@ -36,6 +36,7 @@ public static class GodEconomy {
   double buildUnits=Math.Min(resourceBudget,workers*.08/(1+s.infrastructure*.01));
   double targetBuild=buildUnits*(2+s.era)*price;
   s.lastBuildPaid=Pay(s.treasury,s.business,targetBuild);
+  s.salesReceipts=Sum(s.salesReceipts,s.lastBuildPaid);
   double actualBuild=targetBuild>0?buildUnits*s.lastBuildPaid/targetBuild:0;
   s.infrastructure=Sum(s.infrastructure,actualBuild);s.capitalInvested=Sum(s.capitalInvested,s.lastBuildPaid);resourceBudget-=actualBuild;
   double researchDemand=workers*.15*(1+s.infrastructure*.02)*price;
