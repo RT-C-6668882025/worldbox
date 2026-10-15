@@ -17,7 +17,7 @@ Built from the pinned pristine ARM64 APK, retaining native UI, save structures, 
 
 ## Accounting and execution boundaries
 
-- Existing public, commercial, payroll, education, military and political balances retain the previous save key. GOD can fund integer native public costs by conversion at the current rate.
+- Existing public, commercial, payroll, education, military and political balances retain the previous save key. All public costs are gold-only. GOD is not automatically converted, and work no longer awards GOD. Only explicit user exchange controls can convert it.
 - Native domestic transfer eligibility and dock destination selection are retained. Foreign trade is disallowed between enemies; the adapter does not create new roads, ships or diplomacy targets.
 - Dock settlement is limited to one successful destination per boat per world year; a failed or blocked delivery does not mark the destination as traded.
 - Alliance accounting runs once per alliance/year. A dissolved alliance's genuinely unclaimed residual is held in world custom data and can fund a future live alliance; a named exiting member's blocked refund stays separate.

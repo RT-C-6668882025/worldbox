@@ -37,13 +37,14 @@ def main():
  def compile(name,sources,reference,exe=True):
   rsp=out/(name+'.rsp');rsp.write_text('\n'.join(['-nostdlib+','-target:'+('exe' if exe else 'library'),'-out:'+str(out/(name+'.dll'))]+['-r:'+str(r) for r in reference]+[str(ROOT/s) for s in sources]));run(dotnet,csc,'@'+str(rsp))
   if exe:(out/(name+'.runtimeconfig.json')).write_text(json.dumps(runtime))
- compile('RebellionRules',['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','IndustrialAppearance.cs','IntegrationRules.cs','NativeSystems.cs','NativeProgression.cs','NativeEconomyUI.cs','NativeEconomyEditors.cs','CurrencyScope.cs','GodWorldRuntime.cs'],list(managed.glob('*.dll')),False)
+ compile('RebellionRules',['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','NativeUnlocks.cs','IndustrialAppearance.cs','IntegrationRules.cs','NativeSystems.cs','NativeProgression.cs','NativeEconomyUI.cs','NativeEconomyEditors.cs','CurrencyScope.cs','GodWorldRuntime.cs'],list(managed.glob('*.dll')),False)
  shutil.copy(cecil,out/'Mono.Cecil.dll');compile('Patch',['Patch.cs'],refs+[cecil]);run(dotnet,out/'Patch.dll',managed/'Assembly-CSharp.dll',out/'RebellionRules.dll',managed,out/'Assembly-CSharp.patched.dll')
  compile('VerifyIL',['VerifyIL.cs'],refs+[cecil]);verify_log=run(dotnet,out/'VerifyIL.dll',out/'Assembly-CSharp.patched.dll',managed)
  shutil.copy(managed/'Newtonsoft.Json.dll',out/'Newtonsoft.Json.dll')
  compile('EconomyTests',['EconomyModel.cs','LifecyclePolicy.cs','EconomyModelTests.cs'],refs);economy_log=run(dotnet,out/'EconomyTests.dll')
  compile('IntegrationTests',['IntegrationRules.cs','IntegrationRulesTests.cs'],refs);integration_log=run(dotnet,out/'IntegrationTests.dll')
  compile('RuntimeTests',['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','IntegrationRules.cs','NativeProgression.cs','NativeEconomyUI.cs','CurrencyScope.cs','GodWorldRuntime.cs','RuntimeTests.cs'],refs+[out/'Newtonsoft.Json.dll']);runtime_log=run(dotnet,out/'RuntimeTests.dll')
+ compile('UnlockTests',['NativeUnlocks.cs','UnlockTests.cs'],refs);unlock_log=run(dotnet,out/'UnlockTests.dll')
  render_sources=['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','IntegrationRules.cs','NativeProgression.cs','NativeEconomyUI.cs','CurrencyScope.cs','GodWorldRuntime.cs','RuntimeTests.cs','IndustrialAppearance.cs','RenderTests.cs']
  render_rsp=out/'RenderTests.rsp';render_rsp.write_text('\n'.join(['-nostdlib+','-target:exe','-define:RENDER_TESTS','-main:RenderTests','-out:'+str(out/'RenderTests.dll')]+['-r:'+str(r) for r in refs+[out/'Newtonsoft.Json.dll']]+[str(ROOT/s) for s in render_sources]));run(dotnet,csc,'@'+str(render_rsp));(out/'RenderTests.runtimeconfig.json').write_text(json.dumps(runtime));render_log=run(dotnet,out/'RenderTests.dll',out/'sprite-preview')
  unsigned=out/'worldbox-economy-native-unsigned.apk';run('python3',ROOT/'repack.py',apk,out/'Assembly-CSharp.patched.dll',out/'RebellionRules.dll',unsigned)
@@ -62,7 +63,7 @@ def main():
   shutil.copyfileobj(source,target,1024*1024);target.flush();os.fsync(target.fileno())
  if sha(staged)!=sha(temporary):raise SystemExit("Signed APK transfer hash mismatch.")
  os.replace(staged,signed);signing_dir.cleanup()
- receipt={'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
+ receipt={'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'unlock':int(re.search(r'(\d+) unlock checks passed',unlock_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt,indent=2))
 if __name__=='__main__':main()
 

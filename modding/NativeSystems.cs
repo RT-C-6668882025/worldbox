@@ -20,7 +20,7 @@ public static class NativeSystems {
  static bool Diplomacy(){return Law("world_law_diplomacy");}
  static City Capital(Kingdom k){if(k==null)return null;City first=null;foreach(var c in k.cities){if(c==null||!c.isAlive())continue;if(first==null)first=c;if(c.isCapitalCity())return c;}return first;}
  static bool Related(Actor a,Actor b){if(a==null||b==null)return false;if(a.family!=null&&a.family==b.family)return true;var d=(ActorData)a.getData();var other=(ActorData)b.getData();return d.lover==other.id||d.best_friend_id==other.id||other.lover==d.id||other.best_friend_id==d.id;}
- static double Worth(City c){return GodWorldRuntime.GetGold(c)+GodWorldRuntime.GetGod(c)*GodWorldRuntime.GetRate();}
+ static double Worth(City c){return GodWorldRuntime.GetGold(c);}
  static void Restore(City c,string id,int amount){if(amount<=0)return;if(id=="gold")GodWorldRuntime.CreditPublic(c,amount);else c.addResourcesToRandomStockpile(id,amount);}
  static int Remove(City c,string id,int amount){int before=c.getResourcesAmount(id);c.takeResource(id,amount);return Math.Max(0,before-c.getResourcesAmount(id));}
  static int Add(City c,string id,int amount){int before=c.getResourcesAmount(id);c.addResourcesToRandomStockpile(id,amount);return Math.Max(0,c.getResourcesAmount(id)-before);}

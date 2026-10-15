@@ -31,7 +31,7 @@ public static class GodEconomy {
  public static bool SetRate(double rate){if(!Valid(rate)||rate==0)return false;goldPerGod=rate;return true;}
  public static bool Exchange(GodWallet w,bool fromGod,double amount){if(w==null||!Valid(amount)||!Valid(goldPerGod)||goldPerGod==0)return false;double input=fromGod?w.god:w.gold,output=fromGod?w.gold:w.god,converted=fromGod?amount*goldPerGod:amount/goldPerGod,next=output+converted;if(!Valid(input)||!Valid(output)||input<amount||!Valid(converted)||!Valid(next))return false;if(fromGod){w.god=input-amount;w.gold=next;}else{w.gold=input-amount;w.god=next;}return true;}
  public static bool Transfer(GodWallet from,GodWallet to,double amount){if(from==null||to==null||!Valid(amount)||!Valid(from.gold)||!Valid(to.gold)||from.gold<amount||!Valid(to.gold+amount))return false;if(Object.ReferenceEquals(from,to))return true;from.gold-=amount;to.gold+=amount;return true;}
- static double Pay(GodWallet from,GodWallet to,double desired){if(desired>from.gold&&from.god>0&&goldPerGod>0){double convert=Math.Min(from.god,(desired-from.gold)/goldPerGod);Exchange(from,true,convert);}double amount=Math.Min(from.gold,Math.Max(0,desired));return Transfer(from,to,amount)?amount:0;}
+ static double Pay(GodWallet from,GodWallet to,double desired){double amount=Math.Min(from.gold,Math.Max(0,desired));return Transfer(from,to,amount)?amount:0;}
  public static double TotalGold(GodEconomyState s){return s.treasury.gold+s.households.gold+s.business.gold+s.education.gold+s.military.gold+s.politics.gold;}
  // Resources is real city stock, supplied by the native adapter. Output is goods,
  // never newly minted currency; all income below is payment by another wallet.

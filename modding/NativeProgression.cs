@@ -22,14 +22,5 @@ public static class NativeProgression {
  public static void AfterCraft(Actor actor,bool success) { if(success)SkillWork(actor,0,3); }
  public static void AfterReading(Actor actor,int result) { if(result==0)SkillWork(actor,2,3+SkillLevel(actor,2)/4); }
  public static void AfterDelivery(Actor actor,int accepted) { if(accepted>0)SkillWork(actor,0,Math.Min(10,accepted)); }
- public static bool AllowEquipment(Actor actor,EquipmentAsset equipment,City city) {
-  if(equipment==null||city==null)return equipment!=null;if(!NativeLifecycle.ModernEquipment(city,equipment))return false;
-  int era=GodWorldRuntime.GetEra(city);string material=equipment.material??"";
-  // Confirmed shipped material IDs; retain cost/payment/equipment-value checks downstream.
-  if(material=="wood")return era>=1;
-  if(material=="stone")return era>=1;
-  if(material=="copper"||material=="bronze"||material=="iron"||material=="silver")return era>=3;
-  if(material=="steel"||material=="mythril"||material=="adamantine")return era>=4;
-  return true; // Unknown native assets remain original rather than inventing compatibility.
- }
+ public static bool AllowEquipment(Actor actor,EquipmentAsset equipment,City city){return equipment!=null&&(city==null||NativeLifecycle.ModernEquipment(city,equipment));}
 }

@@ -29,8 +29,8 @@ public static class GodWorldRuntime {
  public static Kingdom Nation(City city){return KingdomOf(city);}
  public static int Year(){var map=Map();return map==null?0:map.year;}
  public static double Attribute(Actor actor,string id){return actor==null?0:Stats(actor)[id];}
- public static bool CanPayPublic(City city,int amount){return city!=null&&amount>=0&&(double)GetGold(city)+GetGod(city)*GetRate()>=amount;}
- public static bool EnsurePublicLiquidity(City city,int amount){if(!CanPayPublic(city,amount))return false;double need=amount-GetGold(city);if(need>0)ExchangeCore(city,false,need/GetRate(),false);return GetGold(city)>=amount;}
+ public static bool CanPayPublic(City city,int amount){return city!=null&&amount>=0&&GetGold(city)>=amount;}
+ public static bool EnsurePublicLiquidity(City city,int amount){return CanPayPublic(city,amount);}
  public static bool TryDebitPublic(City city,int amount){
   if(!EnsurePublicLiquidity(city,amount))return false;if(amount==0)return true;
   double before=GetGold(city);city.takeResource("gold",amount);double paid=before-GetGold(city);
@@ -70,7 +70,6 @@ public static class GodWorldRuntime {
   if(role==2){e.state.readingWork+=work;PayActor(a,e.state.education,wanted);}
   if(role==0)e.state.practiceWork+=work;
   // Gold production wages are already funded at the native income event.
-  double godWage=Math.Min(Math.Min(e.state.treasury.god,wanted*.01),Math.Max(0,NativeLifecycle.GodCapacity(a)-NativeLifecycle.PersonalGod(a)));if(godWage>0){double old=ReadDouble(d,"godworld.personal.god");if(Finite(old+godWage)){e.state.treasury.god-=godWage;WriteDouble(d,"godworld.personal.god",old+godWage);}}
   e.dirty=true;
  }
  public static int Loyalty(City city,int original){original=NativeLifecycle.Loyalty(city,original);var e=Get(city);if(e==null)return original;return Math.Max(-1000,original-(int)Math.Round((100-e.state.loyalty)*.8));}
@@ -97,7 +96,6 @@ public static class GodWorldRuntime {
   int wanted=(int)Math.Min(amount,Int32.MaxValue-(long)Math.Max(0,d.loot));int remaining=wanted;
   int payroll=(int)Math.Min(remaining,Math.Max(0,Math.Floor(e.state.households.gold)));e.state.households.gold-=payroll;remaining-=payroll;
   int commercial=(int)Math.Min(remaining,Math.Max(0,Math.Floor(e.state.business.gold)));e.state.business.gold-=commercial;remaining-=commercial;
-  if(remaining>GetGold(city)&&GetGod(city)>0)ExchangeCore(city,false,Math.Min(GetGod(city),(remaining-GetGold(city))/GetRate()),false);
   int publicWage=(int)Math.Min(remaining,GetGold(city));double before=GetGold(city);city.takeResource("gold",publicWage);publicWage=(int)Math.Max(0,before-GetGold(city));
   e.state.wagesPaid+=payroll+commercial;e.state.treasury.gold=GetGold(city);e.dirty=true;return payroll+commercial+publicWage;
  }
@@ -116,6 +114,7 @@ public static class GodWorldRuntime {
  }
  public static int SaturatingResourceSum(int a,int b){return (int)Math.Max(0,Math.Min(Int32.MaxValue,(long)Math.Max(0,a)+Math.Max(0,b)));}
 
- public static void EnsureBuildLiquidity(City city,ConstructionCost cost){if(city==null||cost==null)return;if(city.getResourcesAmount("wood")<cost.wood||city.getResourcesAmount("stone")<cost.stone||city.getResourcesAmount("common_metals")<cost.common_metals)return;double needed=(double)Math.Max(0,cost.gold)+LaborCost(city,cost)-GetGold(city);if(needed>0){double convert=Math.Min(GetGod(city),needed/GetRate());if(convert>0)ExchangeCore(city,false,convert,false);}}
+ public static void EnsureBuildLiquidity(City city,ConstructionCost cost){}
+
 
 }

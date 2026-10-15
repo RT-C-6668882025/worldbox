@@ -17,7 +17,7 @@ Scope: the managed assemblies embedded in the installed-compatible Alpha 3.1 APK
 ## Changes
 
 1. Remove the global salary interception from `Actor.addMoney`. Keep settlement, taxes and existing money transfers on their native paths.
-2. Fund only newly earned production income at ten verified producer call sites. Debit payroll escrow, business funds and then public funds before crediting native pending income. GOD can fund the public share through the current exchange rate. Tax/loot transfer call sites are not re-funded.
+2. Fund only newly earned production income at ten verified producer call sites. Debit payroll escrow, business funds and then public funds before crediting native pending income. The public share uses gold only; GOD must be exchanged manually by the user first. Tax/loot transfer call sites are not re-funded.
 3. Remove the global spending interception. Route verified commercial purchases to business, and normal plot fees to a separate political wallet. Charge no more than the actor actually holds.
 4. Debit the gift donor once, with recipient capacity checked before debit. Do not charge city funds for gifts.
 5. Remove synthetic annual resident consumption, model sales, 55% model wages and the model's fixed 15% commercial tax. Retain native taxes and actual purchase events.

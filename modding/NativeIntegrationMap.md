@@ -1,3 +1,5 @@
+> 历史 API 核查记录。当前规则已改为全装备/个人特质解锁、发展只支付金币；早期材料时代门槛和 GOD 自动支付描述已被 STATUS.md 的最新规则取代。
+
 # Native progression integration (verified original managed DLL)
 
 `NativeProgression.cs` keeps individual XP in native `BaseSystemData` custom integer fields and reads Actor's internal data using cached reflection. Roles: production 0, commerce 1, research 2, governance 3, combat 4 (steam). Threshold is 25 × level², bounded by the integer XP representation; five completed work points give one native XP. It does not award idle XP. The runtime adapter additionally integrates commerce/education/governance and native kill events.

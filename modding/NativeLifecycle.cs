@@ -35,8 +35,8 @@ public static class NativeLifecycle {
   else{double gain=amount*rate;if(g<amount||gain>Int32.MaxValue-d.money)return false;int whole=(int)Math.Floor(gain);if(whole==0)return false;Write(d,"godworld.personal.god",g-whole/rate);d.money+=whole;}return true;
  }
  public static int Quote(int amount,Actor a){if(amount<=0)return 0;var s=a==null?null:GodWorldRuntime.State(a.getCity());return (int)Math.Ceiling(LifecyclePolicy.Bound(amount*(s==null?1:s.inflation),1,1000000));}
- public static bool CanAfford(Actor a,int amount){if(a==null)return false;int n=Quote(amount,a);var d=(ActorData)a.getData();return d.money+PersonalGod(a)*GodWorldRuntime.GetRate()>=n;}
- public static int LiquidPayment(Actor a,int requested){int price=Quote(requested,a);var d=(ActorData)a.getData();int missing=Math.Max(0,price-d.money);if(missing>0){double n=Math.Min(PersonalGod(a),missing/GodWorldRuntime.GetRate());if(n>0)ExchangePersonal(a,false,n);}return Math.Min(price,Math.Max(0,d.money));}
+ public static bool CanAfford(Actor a,int amount){if(a==null)return false;int n=Quote(amount,a);var d=(ActorData)a.getData();return d.money>=n;}
+ public static int LiquidPayment(Actor a,int requested){return Math.Min(Quote(requested,a),Math.Max(0,((ActorData)a.getData()).money));}
  public static void RecordWork(Actor a,int wanted,int paid){
   if(a==null||wanted<=0)return;wanted=(int)Math.Min(wanted,Int32.MaxValue-(long)Math.Max(0,((ActorData)a.getData()).loot));if(wanted<=0)return;var c=a.getCity();if(c==null)return;var s=GodWorldRuntime.State(c);var d=Data(a);s.wageRequested+=wanted;s.wageFunded+=paid;
   if(paid>0){d.set("godworld.employed.year",GodWorldRuntime.Year());int sector=a.citizen_job==null?0:Sector(a.citizen_job.id);d.set("godworld.employer.sector",sector);}
@@ -98,7 +98,6 @@ public static class NativeLifecycle {
   }
   foreach(var c in k.cities.OrderBy(c=>c==null?0:-GodWorldRuntime.State(c).crisis).ToArray()){
    if(c==null||!c.isAlive())continue;double gap=Math.Max(0,c.getPopulationPeople()*LifecyclePolicy.Wage(GodWorldRuntime.GetEra(c),GodWorldRuntime.State(c).inflation)-GodWorldRuntime.GetGold(c));
-   if(gap>n.wallet.gold&&n.wallet.god>0)GodEconomy.Exchange(n.wallet,true,Math.Min(n.wallet.god,(gap-n.wallet.gold)/GodWorldRuntime.GetRate()));
    int aid=(int)Math.Min(Math.Min(Math.Floor(n.wallet.gold),Math.Ceiling(gap)),Int32.MaxValue-GodWorldRuntime.GetGold(c));if(aid>0&&GodWorldRuntime.CreditPublic(c,aid))n.wallet.gold-=aid;
   }SaveNation(k,n);
  }
@@ -115,7 +114,7 @@ public static class NativeLifecycle {
  static int ComputeTarget(City c){
   if(c==null||!Law("world_law_civ_army"))return 0;var k=GodWorldRuntime.Nation(c);if(k==null)return 0;var s=GodWorldRuntime.State(c);bool rebel=RebellionRules.IsRebel(k),war=k.getWars(false).Any(w=>!w.hasEnded());
   int eligible=0;foreach(var a in c.units){if(a==null||!a.isAlive()||a.isBaby()||a.isKing()||a.isCityLeader())continue;if(!rebel&&c.culture!=null&&(a.isSexFemale()&&c.culture.hasTrait("conscription_male_only")||a.isSexMale()&&c.culture.hasTrait("conscription_female_only")))continue;eligible++;}
-  int target=LifecyclePolicy.Mobilize(c.status.population_adults,eligible,rebel,war,s.warLevel,GodWorldRuntime.GetGold(c)+GodWorldRuntime.GetGod(c)*GodWorldRuntime.GetRate(),s.military.gold,LifecyclePolicy.Wage(s.era,s.inflation),s.crisis);return s.stressYears<2?Math.Max(target,Math.Min(eligible,c.countWarriors())):target;
+  int target=LifecyclePolicy.Mobilize(c.status.population_adults,eligible,rebel,war,s.warLevel,GodWorldRuntime.GetGold(c),s.military.gold,LifecyclePolicy.Wage(s.era,s.inflation),s.crisis);return s.stressYears<2?Math.Max(target,Math.Min(eligible,c.countWarriors())):target;
  }
  public static void MilitaryJobs(City c){
   if(c==null)return;int target=Target(c);var jobs=c.jobs;var attacker=CitizenJobLibrary.attacker;
@@ -136,7 +135,7 @@ public static class NativeLifecycle {
  static bool Invest(City c,int wood,int stone,int metal,int cost){if(!Materials(c,wood,stone,metal)||!GodWorldRuntime.TryDebitPublic(c,cost))return false;Remove(c,"wood",wood);Remove(c,"stone",stone);Remove(c,"common_metals",metal);GodWorldRuntime.CreditBusiness(c,cost);return true;}
  static bool FactoryPay(City c,int batches){return batches<=0||GodWorldRuntime.TryDebitPublic(c,batches*LifecyclePolicy.Wage(GodWorldRuntime.GetEra(c),GodWorldRuntime.State(c).inflation));}
  static void Manufacture(City c,int batches,Action<int> consume,Action<int> produce){
-  if(batches<=0)return;var s=GodWorldRuntime.State(c);int fee=LifecyclePolicy.Wage(s.era,s.inflation);int count=(int)Math.Min(batches,Math.Floor((GodWorldRuntime.GetGold(c)+GodWorldRuntime.GetGod(c)*GodWorldRuntime.GetRate())/fee));if(count<=0||!FactoryPay(c,count))return;
+  if(batches<=0)return;var s=GodWorldRuntime.State(c);int fee=LifecyclePolicy.Wage(s.era,s.inflation);int count=(int)Math.Min(batches,Math.Floor((GodWorldRuntime.GetGold(c))/fee));if(count<=0||!FactoryPay(c,count))return;
   consume(count);produce(count);GodWorldRuntime.CreditBusiness(c,count*fee);s.nativeOutput+=count;
   var crew=c.units.Where(a=>a!=null&&a.isAlive()&&!a.isBaby()&&!a.is_profession_warrior&&!a.isKing()&&!a.isCityLeader()).Take(Math.Min(count,Math.Max(1,(int)Math.Min(1000000,s.firmCapacity)))).ToArray();foreach(var actor in crew){int paid=GodWorldRuntime.FundNativeIncome(actor,fee);RecordWork(actor,fee,paid);actor.addLoot(paid);Data(actor).set("godworld.employer.sector",3);}
  }
@@ -173,7 +172,7 @@ public static class NativeLifecycle {
   if(from==null||to==null||from==to||!from.isAlive()||!to.isAlive())return 0;var fk=GodWorldRuntime.Nation(from);var tk=GodWorldRuntime.Nation(to);bool foreign=fk!=tk;if(foreign&&(!Law("world_law_diplomacy")||fk==null||tk==null||fk.isInWarWith(tk)))return 0;
   var seller=GodWorldRuntime.State(from);var buyer=GodWorldRuntime.State(to);int total=0;
   for(int id=0;id<5;id++){double stock=Stock(seller,id),target=Stock(buyer,id);int reserve=Math.Max(2,(int)Math.Min(1000000,seller.firmCapacity));int units=(int)Math.Min(10,Math.Min(Math.Floor(stock-reserve),Math.Max(0,reserve-target)));if(units<=0)continue;
-   int price=(int)Math.Ceiling((id+1)*LifecyclePolicy.Bound(seller.inflation,.05,1000000));int fee=1;int n=(int)Math.Min(units,Math.Floor((GodWorldRuntime.GetGold(to)+GodWorldRuntime.GetGod(to)*GodWorldRuntime.GetRate())/(price+fee)));if(n<=0||!GodWorldRuntime.TryDebitPublic(to,n*(price+fee)))continue;
+   int price=(int)Math.Ceiling((id+1)*LifecyclePolicy.Bound(seller.inflation,.05,1000000));int fee=1;int n=(int)Math.Min(units,Math.Floor((GodWorldRuntime.GetGold(to))/(price+fee)));if(n<=0||!GodWorldRuntime.TryDebitPublic(to,n*(price+fee)))continue;
    Stock(seller,id,stock-n);Stock(buyer,id,target+n);GodWorldRuntime.CreditBusiness(from,n*(price+fee));total+=n;GodWorldRuntime.Dirty(from);GodWorldRuntime.Dirty(to);
   }return total;
  }
@@ -184,7 +183,7 @@ public static class NativeLifecycle {
   string[] ids={"godworld_industrial_gun","godworld_electric_gun","godworld_modern_gun"};string[] originals={"shotgun","alien_blaster","alien_blaster"};
   for(int i=0;i<ids.Length;i++){if(library.has(ids[i]))continue;var original=library.get(originals[i]);if(original==null)continue;var asset=library.clone(ids[i],originals[i]);asset.base_stats=(BaseStats)original.base_stats.Clone();asset.unlocked_with_achievement=false;asset.needs_to_be_explored=false;asset.achievement_id="";asset.equipment_subtype="bow";asset.material="steel";asset.equipment_value=200+i*100;asset.cost_gold=30+i*20;asset.cost_coins_resources=0;asset.cost_resource_id_1="common_metals";asset.cost_resource_1=5+i*3;asset.cost_resource_id_2="wood";asset.cost_resource_2=2;asset.base_stats["damage"]=20+i*15;asset.base_stats["range"]=12+i*6;}
  }
- public static bool ModernEquipment(City c,EquipmentAsset asset){if(asset==null||!asset.id.StartsWith("godworld_"))return true;var s=GodWorldRuntime.State(c);int era=GodWorldRuntime.GetEra(c);if(s==null||s.steel<2||s.machinery<1)return false;return asset.id=="godworld_industrial_gun"?era>=5&&s.factory>0:asset.id=="godworld_electric_gun"?era>=6&&s.powerPlant>0&&s.components>=1:era>=8&&s.laboratory>0&&s.components>=2;}
+ public static bool ModernEquipment(City c,EquipmentAsset asset){if(asset==null||!asset.id.StartsWith("godworld_"))return true;var s=GodWorldRuntime.State(c);if(s==null||s.steel<2||s.machinery<1)return false;return asset.id=="godworld_industrial_gun"?s.factory>0:asset.id=="godworld_electric_gun"?s.powerPlant>0&&s.components>=1:s.laboratory>0&&s.components>=2;}
  public static void EquipmentMade(Item item,City c){if(item==null||c==null)return;var a=item.getAsset();if(a==null||!a.id.StartsWith("godworld_"))return;var s=GodWorldRuntime.State(c);s.steel=Math.Max(0,s.steel-2);s.machinery=Math.Max(0,s.machinery-1);if(a.id!="godworld_industrial_gun")s.components=Math.Max(0,s.components-(a.id=="godworld_modern_gun"?2:1));GodWorldRuntime.Dirty(c);}
  static EquipmentAsset Weapon(Actor a){return a==null?null:(EquipmentAsset)WeaponMethod.Invoke(a,null);}
  public static bool AmmoReady(Actor a){var w=Weapon(a);if(w==null||!w.id.StartsWith("godworld_"))return true;var s=GodWorldRuntime.State(a.getCity());return s!=null&&(w.id=="godworld_industrial_gun"?s.ammunition>=1:s.power>=1);}

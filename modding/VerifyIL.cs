@@ -26,5 +26,16 @@ class VerifyIL {
  if(Calls(Find("BehBoatMakeTrade","execute"),"addToInventory")!=0)throw new Exception("Unfunded dock gold creation remains");
  foreach(var pair in new[]{new[]{"CityBehCheckCitizenTasks","execute","MilitaryJobs"},new[]{"City","checkCanMakeWarrior","CanRecruit"},new[]{"City","checkIfWarriorStillOk","CanRemain"},new[]{"City","isOkToSendArmy","CanDeploy"},new[]{"City","tryToMakeWarrior","RecruitResult"},new[]{"DiplomacyHelpers","isWarNeeded","WarNeeded"},new[]{"War","newWar","WarCreated"},new[]{"ItemLibrary","init","InitWeapons"},new[]{"Actor","tryToAttack","AmmoReady"},new[]{"Actor","tryToAttack","Shot"},new[]{"ItemCrafting","craftItem","EquipmentMade"}})if(Calls(Find(pair[0],pair[1]),pair[2])==0)throw new Exception("Missing lifecycle adapter "+pair[2]);
  Console.WriteLine("Verified military jobs, recruitment, deployment, rebellion identity, industrial weapons and ammunition routing.");
+ foreach(var name in new[]{"isUnlocked","isAvailable","isUnlockedByPlayer"})if(Calls(Find("BaseUnlockableAsset",name),"Target")!=1)throw new Exception("Missing unlock availability gate "+name);
+ if(Calls(Find("ItemLibrary","fillUnlockedPools"),"EquipmentPools")!=1||Calls(Find("GameProgress","loadData"),"Apply")<1)throw new Exception("Missing native unlock pool/load routing");
+ var helper=AssemblyDefinition.ReadAssembly(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(args[0]),"RebellionRules.dll"));
+ foreach(var type in helper.MainModule.Types)foreach(var method in type.Methods){if(!method.HasBody)continue;foreach(var ins in method.Body.Instructions){var call=ins.Operand as MethodReference;if(call==null)continue;
+  if(call.DeclaringType.Name=="GodEconomy"&&call.Name=="Exchange"&&!(type.Name=="GodWorldRuntime"&&method.Name=="ExchangeCore")&&!(type.Name=="NativeLifecycle"&&method.Name=="NationalOperation"))throw new Exception("Automatic GOD exchange remains: "+method.FullName);
+  if(call.Name=="ExchangeCore"&&!(type.Name=="GodWorldRuntime"&&method.Name=="Exchange"))throw new Exception("Unrequested city exchange remains: "+method.FullName);
+  if(call.Name=="ExchangePersonal"&&type.Name!="GodCurrencyEditorPanel")throw new Exception("Automatic personal exchange remains: "+method.FullName);
+ }}
+ var spending=new[]{"CanPayPublic","EnsurePublicLiquidity","FundNativeIncome","RewardWork","EnsureBuildLiquidity","LiquidPayment","CanAfford","Manufacture","ComputeTarget","IndustrialTrade","NationalYear","Worth"};
+ foreach(var type in helper.MainModule.Types)foreach(var method in type.Methods.Where(m=>m.HasBody&&spending.Contains(m.Name)))if(method.Body.Instructions.Any(i=>i.Operand is MethodReference&&new[]{"GetGod","PersonalGod","Exchange","ExchangeCore","ExchangePersonal"}.Contains(((MethodReference)i.Operand).Name)))throw new Exception("GOD remains a development payment source: "+method.FullName);
+ Console.WriteLine("Verified all equipment/personal-trait unlock gates and gold-only development payment boundaries.");
  Console.WriteLine("Verified production, shipping, diplomacy, succession, equipment and genome routing.");}
 }
