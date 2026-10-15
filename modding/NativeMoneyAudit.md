@@ -21,14 +21,14 @@ Scope: the managed assemblies embedded in the installed-compatible Alpha 3.1 APK
 3. Remove the global spending interception. Route verified commercial purchases to business, and normal plot fees to a separate political wallet. Charge no more than the actor actually holds.
 4. Debit the gift donor once, with recipient capacity checked before debit. Do not charge city funds for gifts.
 5. Remove synthetic annual resident consumption, model sales, 55% model wages and the model's fixed 15% commercial tax. Retain native taxes and actual purchase events.
-6. Allocate education/military budgets separately; unused budgets are not allocated again. Pay education rewards on completed native reading and military pay to sampled actual warriors. Actual production/practice supports pre-literate knowledge growth; idle sampling does not grant research.
+6. Allocate education/military budgets separately; unused budgets are not allocated again. Pay education rewards on completed native reading and military pay to actual warriors (full annual census in the lifecycle extension). Actual production/practice supports pre-literate knowledge growth; idle sampling does not grant research.
 7. Preserve legacy payroll/business balances and initialize additional wallet fields when older JSON is loaded. Keep the existing save key.
 8. Replace the old 99,999 money/loot clamp with saturation at the native integer representation limit.
 
 ## Limits
 
 - Education, military, political and payroll wallets are adapter accounting, not pre-existing native government departments.
-- Resident skill/monetary estimates and annual military payment use the existing rotating sample of at most 64 residents per city, so aggregate monetary pressure is approximate.
+- The current lifecycle adapter replaces sampling with a full annual census in bounded batches and tracks per-actor payroll years. Monetary statistics are the most recently completed census, not a live global total.
 - Native gold-resource production and explicit player powers remain native. This is not a claim that every possible gold creation path in the game has been removed.
-- Economic era/capital/output remain an abstract development model; this patch does not add industrial/electric building art or complete production chains.
+- See STATUS.md and RequirementsCoverage.md: the lifecycle extension removes phantom annual output, adds material-funded industrial chains and six funded building appearances. Enterprise organization remains a city-sector model.
 - Tests cover the accounting adapter and compiled IL routing. Installation, Unity startup, real save loading and UI rendering still need device validation for this build.

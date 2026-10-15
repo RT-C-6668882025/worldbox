@@ -10,6 +10,13 @@ public sealed class GodEconomyState {
  public double salesReceipts, wagesPaid, circulatingGold, circulatingGod, readingWork, practiceWork;
  public double infrastructure, knowledge, capitalInvested, resources, years, warYears, satisfaction=100, loyalty=100, inflation=1, previousMoney, previousOutput;
  public int era, warLevel;
+ public double residentMoney, pendingIncome;
+ public double nativeOutput, wageRequested, wageFunded, wageArrears, armyArrears, crisis, serviceCoverage=1, wageCoverage=1, armyCoverage=1, foodCoverage=1, unemployment;
+ public int stressYears, employed, monetized;public int[] sectorWorkers=new int[4];
+ public double firmCapacity=4, maintenancePaid, investmentPaid, fiscalPaid, capitalLoss;
+ public double coal, steel, machinery, power, components, ammunition;
+ public int steamPlant, factory, powerPlant, laboratory;
+ public double logistics;
  public double lastBuildPaid,lastResearchPaid,lastArmyPaid,lastOutput,lastProfit;
  public double production, commerce, research, governance, combat;
 }
@@ -48,13 +55,12 @@ public static class GodEconomy {
   s.readingWork=s.practiceWork=0;
   if(atWar){s.warYears=Sum(s.warYears,1);s.warLevel=(int)Math.Min(int.MaxValue,1+Math.Floor(s.warYears/3));}
   else{s.warYears=0;s.warLevel=0;}
-  double armyCost=soldiers*(.3+s.era*.12)*(1+s.warLevel*.2)*(1+Clamp(kingAggression,0,100)/200)*price;
+  double armyCost=(double)soldiers*LifecyclePolicy.Wage(s.era,price);
   s.lastArmyPaid=Pay(s.treasury,s.military,Math.Max(0,armyCost-s.military.gold));
-  double armyCoverage=armyCost>0?Math.Min(1,s.military.gold/armyCost):1;
-  // Infrastructure thresholds create successive acceleration as production matures.
-  double phase=1+Math.Floor(Math.Log(1+s.infrastructure)/Math.Log(2))*.22;
-  double potential=workers*.1*phase*(1+s.production*.01)*(1+s.era*.15);
-  s.lastOutput=Math.Min(resourceBudget,potential);resourceBudget-=s.lastOutput;
+  double armyCoverage=armyCost>0?Math.Min(1,s.military.gold/armyCost):1;s.armyCoverage=armyCoverage;
+  // Only measured native deliveries/processing are economic output. No second
+  // resource destruction or fictitious commodity production at year settlement.
+  s.lastOutput=Math.Max(0,s.nativeOutput);s.nativeOutput=0;
   // Real native purchases and funded work supply these counters. No second
   // annual purchase, wage, or fixed-rate tax is synthesized here.
   double sales=Math.Max(0,s.salesReceipts),wages=Math.Max(0,s.wagesPaid);
@@ -63,15 +69,30 @@ public static class GodEconomy {
   double reinvestUnits=Math.Min(resourceBudget,s.lastProfit*.3/((2+s.era)*price));
   double reinvestPaid=Pay(s.business,s.households,reinvestUnits*(2+s.era)*price);
   double actualReinvest=reinvestPaid/((2+s.era)*price);resourceBudget-=actualReinvest;
-  s.infrastructure=Sum(s.infrastructure,actualReinvest);s.capitalInvested=Sum(s.capitalInvested,reinvestPaid);s.resources=Math.Max(0,resourceBudget);
+  s.firmCapacity=Sum(s.firmCapacity,actualReinvest*.25);s.infrastructure=Sum(s.infrastructure,actualReinvest);s.capitalInvested=Sum(s.capitalInvested,reinvestPaid);s.resources=Math.Max(0,resourceBudget);
   s.production=Sum(s.production,workers>0?s.lastOutput/workers*.08:0);
   s.commerce=Sum(s.commerce,sales>0?.05:0);s.research=Sum(s.research,education*.08);
   s.combat=Sum(s.combat,atWar?armyCoverage*.08:0);
+  s.wageCoverage=s.wageRequested>0?Clamp(s.wageFunded/s.wageRequested,0,1):(s.wageArrears>0?0:1);
+  if(TotalGold(s)+s.circulatingGold+s.treasury.god*goldPerGod>0||population>=40)s.monetized=1;
+  double serviceNeed=population*(.08+s.era*.04)*price;
+  s.fiscalPaid=Pay(s.treasury,s.politics,Math.Max(0,serviceNeed-s.politics.gold));
+  s.serviceCoverage=serviceNeed>0?Clamp(s.politics.gold/serviceNeed,0,1):1;
+  // Existing civic providers perform maintenance, funded by the political budget.
+  s.maintenancePaid=Pay(s.politics,s.business,Math.Min(serviceNeed,s.politics.gold));
+  bool deficit=s.foodCoverage<.5||s.monetized!=0&&(s.wageCoverage<.5||armyCoverage<.5||s.serviceCoverage<.5);
+  s.stressYears=deficit?Math.Min(1000,s.stressYears+1):Math.Max(0,s.stressYears-1);
+  s.crisis=LifecyclePolicy.Stress(s.crisis,s.wageCoverage,armyCoverage,s.serviceCoverage,s.foodCoverage,s.unemployment,s.monetized!=0);
+  if(deficit&&s.stressYears>3)s.crisis=Clamp(s.crisis+Math.Min(20,s.stressYears-3),0,100);
+  s.capitalLoss=LifecyclePolicy.Depreciation(s.infrastructure,s.serviceCoverage,s.crisis,atWar);
+  s.infrastructure=Math.Max(0,s.infrastructure-s.capitalLoss);
+  s.firmCapacity=Math.Max(1,s.firmCapacity*(1-(s.crisis>=50?.04:.005)));
+  s.wageRequested=s.wageFunded=0;
   double burden=atWar?(1+s.warLevel*.4)*(1+(1-armyCoverage)):0;
-  s.satisfaction=Clamp(s.satisfaction+(sales>0?.25:-.15)-burden,0,100);
-  s.loyalty=Clamp(s.loyalty+(s.satisfaction-50)*.01-burden*.4,0,100);
-  while(s.era<EraNames.Length-1){int next=s.era+1;double scale=Math.Pow(2,next);if(s.infrastructure<scale*2||s.knowledge<scale||s.production<next*.1||s.resources<next)break;s.era=next;}
-  double money=TotalGold(s)+s.circulatingGold+(s.treasury.god+s.households.god+s.business.god+s.education.god+s.military.god+s.politics.god+s.circulatingGod)*goldPerGod;if(Valid(money)&&s.previousMoney>0&&s.previousOutput>0&&s.lastOutput>0){double nextPrice=(money/s.previousMoney)/(s.lastOutput/s.previousOutput);if(Valid(nextPrice)&&nextPrice>0)s.inflation=Clamp(price*(1+.1*(nextPrice-1)),.05,1000000);}
+  s.satisfaction=Clamp(s.satisfaction+(sales>0?.8:-.15)-burden-s.crisis*.12,0,100);
+  s.loyalty=Clamp(s.loyalty+(s.satisfaction-50)*.04-burden*.4-s.crisis*.08,0,100);
+  while(s.era<EraNames.Length-1){int next=s.era+1;if(next>=5&&s.steamPlant==0||next>=6&&s.factory==0||next>=7&&s.powerPlant==0||next>=8&&s.laboratory==0)break;double scale=Math.Pow(2,next);if(s.infrastructure<scale*2||s.knowledge<scale||s.production<next*.1||s.resources<next)break;s.era=next;}
+  double money=TotalGold(s)+s.circulatingGold+(s.treasury.god+s.households.god+s.business.god+s.education.god+s.military.god+s.politics.god+s.circulatingGod)*goldPerGod;if(Valid(money)&&s.previousMoney>0){double outputChange=s.previousOutput>0&&s.lastOutput>0?s.lastOutput/s.previousOutput:1;double nextPrice=(money/s.previousMoney)/outputChange;if(Valid(nextPrice)&&nextPrice>0)s.inflation=Clamp(price*(1+.1*(nextPrice-1)),.05,1000000);}
   s.previousMoney=money;s.previousOutput=s.lastOutput;
  }
 }

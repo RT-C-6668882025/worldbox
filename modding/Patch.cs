@@ -17,9 +17,17 @@ class Patch {
   if(module.AssemblyReferences.Any(x=>x.Name=="RebellionRules"))throw new Exception("Input already patched: use pristine source APK.");
   var city=T("City");var kingdom=city.Fields.Single(x=>x.Name=="kingdom");
   End(M("City","updateCityStatus"),()=>new[]{Arg(0),Arg(0),Instruction.Create(OpCodes.Ldfld,kingdom),Call("RebellionRules","ApplyManpower"),Arg(0),Instruction.Create(OpCodes.Ldfld,city.Fields.Single(x=>x.Name=="status")),Instruction.Create(OpCodes.Ldc_I4,Int32.MaxValue),Instruction.Create(OpCodes.Stfld,T("CityStatus").Fields.Single(x=>x.Name=="maximum_items"))});
-  var possible=M("CityBehCheckCitizenTasks","getPossibleWarriors");var il=possible.Body.GetILProcessor();var original=possible.Body.Instructions.First();var count=new VariableDefinition(module.TypeSystem.Int32);possible.Body.Variables.Add(count);possible.Body.InitLocals=true;
-  Prefix(possible,Arg(1),Arg(1),Instruction.Create(OpCodes.Ldfld,kingdom),Call("RebellionRules","GetManpower"),Instruction.Create(OpCodes.Stloc,count),Instruction.Create(OpCodes.Ldloc,count),Instruction.Create(OpCodes.Ldc_I4_0),Instruction.Create(OpCodes.Blt,original),Instruction.Create(OpCodes.Ldloc,count),Instruction.Create(OpCodes.Ret));
-  Result(possible,n=>new[]{Arg(1),Arg(1),Instruction.Create(OpCodes.Ldfld,kingdom),Instruction.Create(OpCodes.Ldloc,n),Call("GodWorldRuntime","WarManpower")});
+  // The native task allocator has a >15-adult gate. Rebuild military jobs after
+  // its civilian allocation, so the actual job slots and recruitment agree.
+  End(M("CityBehCheckCitizenTasks","execute"),()=>new[]{Arg(1),Call("NativeLifecycle","MilitaryJobs")});
+  End(M("City","updateCityStatus"),()=>new[]{Arg(0),Call("NativeLifecycle","MilitaryJobs")});
+  var possible=M("CityBehCheckCitizenTasks","getPossibleWarriors");possible.Body.Instructions.Clear();possible.Body.ExceptionHandlers.Clear();possible.Body.Variables.Clear();foreach(var i in new[]{Arg(1),Call("NativeLifecycle","Target"),Instruction.Create(OpCodes.Ret)})possible.Body.Instructions.Add(i);changed.Add(possible);
+  var il=possible.Body.GetILProcessor();Instruction original;
+  foreach(var pair in new[]{new[]{"checkCanMakeWarrior","CanRecruit"},new[]{"checkIfWarriorStillOk","CanRemain"}}){var m=M("City",pair[0]);m.Body.Instructions.Clear();m.Body.ExceptionHandlers.Clear();m.Body.Variables.Clear();foreach(var i in new[]{Arg(0),Arg(1),Call("NativeLifecycle",pair[1]),Instruction.Create(OpCodes.Ret)})m.Body.Instructions.Add(i);changed.Add(m);}
+  var deploy=M("City","isOkToSendArmy");deploy.Body.Instructions.Clear();deploy.Body.ExceptionHandlers.Clear();deploy.Body.Variables.Clear();foreach(var i in new[]{Arg(0),Call("NativeLifecycle","CanDeploy"),Instruction.Create(OpCodes.Ret)})deploy.Body.Instructions.Add(i);changed.Add(deploy);
+  Result(M("City","tryToMakeWarrior"),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeLifecycle","RecruitResult")});
+  Result(M("DiplomacyHelpers","isWarNeeded"),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeLifecycle","WarNeeded")});
+  End(M("War","newWar"),()=>new[]{Arg(0),Call("NativeLifecycle","WarCreated")});
   Prefix(M("War","update"),Arg(0),Call("RebellionRules","CheckDefeat"));
   var capture=M("City","finishCapture");var was=new VariableDefinition(module.TypeSystem.Boolean);capture.Body.Variables.Add(was);capture.Body.InitLocals=true;
   Prefix(capture,Arg(0),Arg(1),Call("RebellionRules","CaptureCapital"),Instruction.Create(OpCodes.Stloc,was));
@@ -40,6 +48,10 @@ class Patch {
   Prefix(M("SavedMap","create"),Call("GodWorldRuntime","Flush"));
   var craft=M("ItemCrafting","craftItem");Prefix(craft,Arg(0),Arg(3),Call("NativeProgression","CraftSkill"),Instruction.Create(OpCodes.Starg,craft.Parameters[3]));
   Result(craft,n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeProgression","AfterCraft"),Instruction.Create(OpCodes.Ldloc,n)});
+  Result(M("Building","calculateMainSprite"),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("IndustrialAppearance","SpriteFor")});
+  End(M("ItemLibrary","init"),()=>new[]{Arg(0),Call("NativeLifecycle","InitWeapons")});
+  il=craft.Body.GetILProcessor();foreach(var c in craft.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).Name=="generateItem").ToArray())After(il,c,new[]{Instruction.Create(OpCodes.Dup),Instruction.Create(OpCodes.Ldarg,craft.Parameters[4]),Call("NativeLifecycle","EquipmentMade")});changed.Add(craft);
+  var shot=M("Actor","tryToAttack");original=shot.Body.Instructions.First();Prefix(shot,Arg(0),Call("NativeLifecycle","AmmoReady"),Instruction.Create(OpCodes.Brtrue,original),Instruction.Create(OpCodes.Ldc_I4_0),Instruction.Create(OpCodes.Ret));Result(shot,n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeLifecycle","Shot")});
   var check=M("ItemCrafting","hasEnoughResourcesToCraft");original=check.Body.Instructions.First();Prefix(check,Arg(0),Arg(1),Arg(2),Call("NativeProgression","AllowEquipment"),Instruction.Create(OpCodes.Brtrue,original),Instruction.Create(OpCodes.Ldc_I4_0),Instruction.Create(OpCodes.Ret));
   var delivery=M("Actor","giveInventoryResourcesToCity");il=delivery.Body.GetILProcessor();foreach(var call in delivery.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).Name=="addResourcesToRandomStockpile").ToArray()){il.InsertBefore(call,Arg(0));call.OpCode=OpCodes.Call;call.Operand=H("GodWorldRuntime","Deliver");}changed.Add(delivery);
   End(M("Actor","increaseKills"),()=>new[]{Arg(0),Call("GodWorldRuntime","CombatWork")});
@@ -53,9 +65,13 @@ class Patch {
    var purchase=M(pair[0],pair[1]);var calls=purchase.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).DeclaringType.Name=="Actor"&&((MethodReference)x.Operand).Name=="spendMoney").ToArray();if(calls.Length==0)throw new Exception("Missing native expense "+purchase.FullName);
    foreach(var c in calls){c.OpCode=OpCodes.Call;c.Operand=H("GodWorldRuntime",pair[2]);}changed.Add(purchase);
   }
+  foreach(var pair in new[]{new[]{"ItemCrafting","hasEnoughResourcesToCraft"},new[]{"BehTryToEatCityFood","execute"},new[]{"BehRepairEquipment","execute"},new[]{"BehLaunchFireworks","execute"},new[]{"PlotManager","newPlot"}}){var m=M(pair[0],pair[1]);foreach(var c in m.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).DeclaringType.Name=="Actor"&&((MethodReference)x.Operand).Name=="hasEnoughMoney").ToArray()){c.OpCode=OpCodes.Call;c.Operand=H("NativeLifecycle","CanAfford");}changed.Add(m);}
+  End(M("CityWindow","showStatsRows"),()=>new[]{Arg(0),Call("NativeLifecycle","ShowCity")});
+  End(M("KingdomWindow","showStatsRows"),()=>new[]{Arg(0),Call("NativeLifecycle","ShowKingdom")});
   var gift=M("BehFinishTalk","makeGift");il=gift.Body.GetILProcessor();var giftAmount=gift.Body.Instructions.Single(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).Name=="getMoneyForGift");After(il,giftAmount,new[]{Arg(1),Arg(2),Call("GodWorldRuntime","PrepareGift")});changed.Add(gift);
   // Preserve native bounds while removing the old 99,999-personal-coin cap.
   foreach(var name in new[]{"addMoney","addLoot"}){var credit=M("Actor",name);foreach(var i in credit.Body.Instructions){if(i.OpCode==OpCodes.Add){i.OpCode=OpCodes.Call;i.Operand=H("GodWorldRuntime","SaturatingResourceSum");}else if(i.OpCode==OpCodes.Ldc_I4&&(int)i.Operand==99999)i.Operand=Int32.MaxValue;}changed.Add(credit);}
+  foreach(var type in new[]{"MetaObject`1","Alliance"}){var sum=M(type,"countTotalMoney");foreach(var i in sum.Body.Instructions.Where(i=>i.OpCode==OpCodes.Add).ToArray()){i.OpCode=OpCodes.Call;i.Operand=H("GodWorldRuntime","SaturatingResourceSum");}changed.Add(sum);}
   Result(M("BehFinishReading","execute"),n=>new[]{Arg(1),Instruction.Create(OpCodes.Ldloc,n),Call("NativeProgression","AfterReading"),Instruction.Create(OpCodes.Ldloc,n)});
   Result(M("Actor","getConstructionSpeed"),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeSystems","Construction")});
   End(M("City","updateCityStatus"),()=>new[]{Arg(0),Call("NativeSystems","CityYear")});

@@ -9,6 +9,7 @@ public static class NativeProgression {
   var data=Data(actor);if(data==null||role<0||role>4)return 0;
   int xp;data.get("god_skill_xp_"+role,out xp,0);return (int)Math.Sqrt(Math.Max(0,xp)/25.0);
  }
+ public static string Progress(Actor a,int role){var d=Data(a);if(d==null)return "";int xp;d.get("god_skill_xp_"+role,out xp,0);int level=SkillLevel(a,role);long next=25L*(level+1)*(level+1);return "Lv "+level+" · "+Math.Max(0,xp)+" / "+Math.Min(Int32.MaxValue,next);}
  public static void SkillWork(Actor actor,int role,int amount) {
   if(actor==null||!actor.isAlive()||role<0||role>4||amount<=0)return;
   var data=Data(actor);if(data==null)return;int old;string key="god_skill_xp_"+role;
@@ -17,12 +18,12 @@ public static class NativeProgression {
   int carry;data.get("god_work_level_carry",out carry,0);carry=Math.Max(0,carry)+gain;
   if(carry>=5)AddExperience.Invoke(actor,new object[]{carry/5});data.set("god_work_level_carry",carry%5);
  }
- public static int CraftSkill(Actor actor,int original) { return original+SkillLevel(actor,0)/4; }
+ public static int CraftSkill(Actor actor,int original) { return (int)Math.Min(Int32.MaxValue,(long)original+SkillLevel(actor,0)/4); }
  public static void AfterCraft(Actor actor,bool success) { if(success)SkillWork(actor,0,3); }
- public static void AfterReading(Actor actor,int result) { if(result==0)SkillWork(actor,2,3); }
+ public static void AfterReading(Actor actor,int result) { if(result==0)SkillWork(actor,2,3+SkillLevel(actor,2)/4); }
  public static void AfterDelivery(Actor actor,int accepted) { if(accepted>0)SkillWork(actor,0,Math.Min(10,accepted)); }
  public static bool AllowEquipment(Actor actor,EquipmentAsset equipment,City city) {
-  if(equipment==null||city==null)return equipment!=null;
+  if(equipment==null||city==null)return equipment!=null;if(!NativeLifecycle.ModernEquipment(city,equipment))return false;
   int era=GodWorldRuntime.GetEra(city);string material=equipment.material??"";
   // Confirmed shipped material IDs; retain cost/payment/equipment-value checks downstream.
   if(material=="wood")return era>=1;

@@ -1,0 +1,46 @@
+{
+  "source_sha256": "c39817efa21e539fe61f318dc1ad4050b424c6120ab8ed384d94148f869c4bdc",
+  "output_sha256": "02fb61a45531ab1b76a004235f9a003b3a9035fdcba8ad47e677dba0d53b8d99",
+  "output": "worldbox-install-compat.apk",
+  "helper_sha256": "297b4bc011eaa31d2c44d237f0257990cc26e0c753354de360cd5b37199dd7e7",
+  "tests": {
+    "economic": 41,
+    "native_adapter_standins": 87,
+    "integration_policy": 39,
+    "hook_stack_graphs": 76,
+    "headless_render": 33,
+    "native_money_routing": true,
+    "native_systems_routing": true
+  },
+  "android_runtime_tested": false,
+  "validation": {
+    "whole_apk_crc": true,
+    "nested_managed_crc": true,
+    "same_signing_certificate": true,
+    "manifest_resources_uncompressed_and_aligned": true,
+    "android_runtime_tested": false
+  },
+  "source_files": {
+    "CurrencyScope.cs": "68b3b511b5e576d9e452bf4c774b4d47e86a95a23db25e57e012da0c26465f26",
+    "EconomyModel.cs": "91dca23cf5c86ac29f7bdfba0ca424d150185d506e1a2c39310c4f560090e3c7",
+    "EconomyModelTests.cs": "643d226710ee6f76c0eca8deebe399b3701f3c49147142573428e40e821a01b0",
+    "GodWorldRuntime.cs": "71ae73f59bf5a26c560a33c5447d0bd6ccf6b72908d5d7d14ca379592bb546f3",
+    "IndustrialAppearance.cs": "df2fde74f209e6406c8af97e01a1944317aef4ed01dd6dfa6cbec3da6b67f305",
+    "IntegrationRules.cs": "fd71fa2eab839ee1eb21a2a3880389d40210f85f9e14c78592bbb74db9263f78",
+    "IntegrationRulesTests.cs": "86acac727286bc4c98390e02172a3c9599d794ee32a9dde9c50a2cd2f9771e8c",
+    "LifecyclePolicy.cs": "b695886308b169fc580807a586cd5b247cbcb232b9537431ffd844ba77de3860",
+    "NativeEconomyEditors.cs": "4d629d5cc9d010ad75be21b238446d03b614fd5840c36811079e742eead47557",
+    "NativeEconomyUI.cs": "3fd8227ddbf4100c1dd56f3b573405b8a4d508da51016fe741a3f1ac6dddf17b",
+    "NativeLifecycle.cs": "f4fadf25c472c44c6b1c40cc0196dfb510bcf4c8df093ab28899e1c95a95573c",
+    "NativeProgression.cs": "16544d258f8542079c5a26597d2a6a9250b50b26acde5a90cbb0ee33b166c033",
+    "NativeSystems.cs": "9bf44bf82204710ef0364d002c195bfc6856d106f75ad38f86b18234ec319f6f",
+    "Patch.cs": "fed73d4113cba62e369ac4110821b8b64ae30c77caf379912ef68ad5fb318fb9",
+    "RebellionRules.cs": "f16a6ec46c008ccc69ff1c246839b0fa02c5fb586001eb5263d5fd58d558f4c5",
+    "RenderTests.cs": "2ef92e73ed4a31d104354be2c116613be317aee14a6aac55f4379558adcd8937",
+    "RuntimeTests.cs": "ba4d8af7ccbab21c1eae83df1658fc97f44a02f9e550fc53537fd5810b87fa26",
+    "VerifyIL.cs": "3a88d354503f7f28b7a68892ca35b5e1f73ba4378fd66443fd141171e853796f",
+    "build.py": "bf28cbdeb5a9b3bb87f5397c4615fb90467b4b3b82d8f813049831ad305200ae",
+    "install_compat.py": "2231e839bd7ac04a15d0f9a03491784ceab8a7177c291248a0d8471de1186ea6",
+    "repack.py": "fc3e0e757f20844214e4c262fc1c31586a145615e0ed80c0fab087a69884201a"
+  }
+}

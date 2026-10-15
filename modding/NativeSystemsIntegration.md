@@ -22,8 +22,8 @@ Built from the pinned pristine ARM64 APK, retaining native UI, save structures, 
 - Dock settlement is limited to one successful destination per boat per world year; a failed or blocked delivery does not mark the destination as traded.
 - Alliance accounting runs once per alliance/year. A dissolved alliance's genuinely unclaimed residual is held in world custom data and can fund a future live alliance; a named exiting member's blocked refund stays separate.
 - Extra read-only rows use native city, kingdom, alliance, item and subspecies windows. They are not separate overlays or replacement editors.
-- Military payments and resident statistics retain the rotating 64-resident sample. Prices, contributions and economic development are explicit adapter policies, not claims that the original game already implements a complete market economy.
-- No modern buildings, industrial machinery or new graphics are added by these adapters.
+- Military payments and resident statistics now process the full annual census in resumable batches of at most 64 residents. Prices, contributions and economic development are explicit adapter policies, not claims that the original game already implements a complete market economy.
+- Industrial chains, funded native-building upgrades and six pixel appearances are provided by NativeLifecycle and IndustrialAppearance; see STATUS.md for the current model boundaries.
 
 ## Validation
 

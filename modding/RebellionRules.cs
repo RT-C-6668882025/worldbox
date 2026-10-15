@@ -3,7 +3,7 @@ public static class RebellionRules {
  public static bool IsRebel(Kingdom kingdom) {
   if (kingdom == null) return false;
   foreach (War war in kingdom.getWars(false))
-   if (!war.hasEnded() && war.getAsset().rebellion && war.isMainAttacker(kingdom)) return true;
+   if (!war.hasEnded() && war.getAsset().rebellion && war.isDefender(kingdom)) return true;
   return false;
  }
  public static int GetManpower(City city, Kingdom kingdom) {
@@ -17,11 +17,11 @@ public static class RebellionRules {
  static readonly System.Runtime.CompilerServices.ConditionalWeakTable<War,Origin> origins=new System.Runtime.CompilerServices.ConditionalWeakTable<War,Origin>();
  public static void CheckDefeat(War war) {
   if(war.hasEnded()||!war.getAsset().rebellion)return;
-  var attacker=war.getMainAttacker();if(attacker==null)return;Origin origin;
+  var attacker=war.getMainDefender();if(attacker==null)return;Origin origin;
   if(!origins.TryGetValue(war,out origin)){
-   long id;war.data.get("godworld.rebel.originCity",out id,0L);City city=null;
+   long id;war.data.get("godworld.rebel.originCity",out id,0L);int version;war.data.get("godworld.rebel.originVersion",out version,0);if(version<2)id=0;City city=null;
    if(id==0)city=attacker.capital;else foreach(var candidate in World.world.cities.list)if(candidate.data.id==id){city=candidate;break;}
-   if(city==null){war.lostWar(attacker);return;}war.data.set("godworld.rebel.originCity",city.data.id);origin=new Origin{city=city};origins.Add(war,origin);
+   if(city==null){war.lostWar(attacker);return;}war.data.set("godworld.rebel.originCity",city.data.id);war.data.set("godworld.rebel.originVersion",2);origin=new Origin{city=city};origins.Add(war,origin);
   }
   if(!origin.city.isAlive()||origin.city.data.kingdomID!=attacker.data.id||origin.city.getPopulationPeople()<=5)war.lostWar(attacker);
  }

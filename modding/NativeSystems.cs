@@ -53,11 +53,11 @@ public static class NativeSystems {
   if(delivered>0){Increment(seller.data,"godworld.goods.exported",delivered);Increment(buyer.data,"godworld.goods.imported",delivered);}
   return delivered;
  }
- public static void Supply(City from,City to,CityStorageSlot slot){if(slot!=null)TradeGoods(from,to,slot.asset,slot.asset.supply_give,null);}
+ public static void Supply(City from,City to,CityStorageSlot slot){if(slot!=null){int n=(int)Math.Min(Int32.MaxValue,slot.asset.supply_give*Math.Max(1,GodWorldRuntime.State(from).logistics));TradeGoods(from,to,slot.asset,n,null);NativeLifecycle.IndustrialTrade(from,to,null);}}
  public static void BoatTrade(Actor boat){
   if(boat==null||BoatTarget==null)return;var dock=BoatTarget.GetValue(boat) as Building;if(dock==null)return;var home=boat.getHomeBuilding();var from=home==null?boat.getCity():home.getCity();var to=dock.getCity();if(from==null||to==null||from==to)return;
   var d=(ActorData)boat.getData();string key=GodWorldRuntime.Year()+":"+to.data.id;
-  if(Text(d,"godworld.lastDockTrade")==key)return;
+  if(Text(d,"godworld.lastDockTrade")==key)return;if(NativeLifecycle.IndustrialTrade(from,to,boat)>0){d.set("godworld.lastDockTrade",key);return;}
   foreach(var r in AssetManager.resources.list){
    if(r.id=="gold"||r.trade_cost<=0&&r.money_cost<=0&&r.loot_value<=0||from.getResourcesAmount(r.id)<=Math.Max(2,r.trade_bound))continue;
    int n=Math.Min(Math.Max(1,r.trade_give),Math.Max(0,from.getResourcesAmount(r.id)-Math.Max(2,r.trade_bound)));
@@ -76,9 +76,9 @@ public static class NativeSystems {
   var r=AssetManager.resources.get(id);int received=Add(c,id,amount);
   if(received==0){if(r!=null)foreach(var ingredient in r.ingredients??new string[0])Restore(c,ingredient,Math.Max(0,r.ingredients_amount));return 0;}
   if(id!="gold"&&r!=null){int fee=ProcessingCost(r,c);if(!GodWorldRuntime.TryDebitPublic(c,fee)){Remove(c,id,received);foreach(var ingredient in r.ingredients??new string[0])Restore(c,ingredient,Math.Max(0,r.ingredients_amount));return 0;}GodWorldRuntime.CreditBusiness(c,fee);}
-  Increment(c.data,"godworld.goods.processed",received);return received;
+  Increment(c.data,"godworld.goods.processed",received);NativeLifecycle.Delivered(c,received);return received;
  }
- public static int Construction(Actor a,int original){return IntegrationRules.ConstructionSpeed(original,NativeProgression.SkillLevel(a,0));}
+ public static int Construction(Actor a,int original){int speed=IntegrationRules.ConstructionSpeed(original,NativeProgression.SkillLevel(a,0));var s=a==null?null:GodWorldRuntime.State(a.getCity());return speed<=0||s==null?speed:(int)Math.Min(Int32.MaxValue,Math.Ceiling(speed*(1+Math.Min(2,s.machinery*.01)+(s.power>0?.25:0))));}
 
  static Fund ReadFund(Alliance a){try{string raw=Text(Data(a),"godworld.alliance.fund");var f=raw.Length==0?new Fund():JsonConvert.DeserializeObject<Fund>(raw);if(f==null||f.gold<0||f.gold>Int32.MaxValue||f.claims==null)return new Fund();return f;}catch{return new Fund();}}
  static void SaveFund(Alliance a,Fund f){Data(a).set("godworld.alliance.fund",JsonConvert.SerializeObject(f));}
