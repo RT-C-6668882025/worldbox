@@ -36,6 +36,7 @@ class VerifyIL {
  }}
  var spending=new[]{"CanPayPublic","EnsurePublicLiquidity","FundNativeIncome","RewardWork","EnsureBuildLiquidity","LiquidPayment","CanAfford","Manufacture","ComputeTarget","IndustrialTrade","NationalYear","Worth"};
  foreach(var type in helper.MainModule.Types)foreach(var method in type.Methods.Where(m=>m.HasBody&&spending.Contains(m.Name)))if(method.Body.Instructions.Any(i=>i.Operand is MethodReference&&new[]{"GetGod","PersonalGod","Exchange","ExchangeCore","ExchangePersonal"}.Contains(((MethodReference)i.Operand).Name)))throw new Exception("GOD remains a development payment source: "+method.FullName);
+ foreach(var library in new[]{"ActorAssetLibrary","SubspeciesTraitLibrary"})if(Calls(Find(library,"post_init"),"Apply")!=1)throw new Exception("Missing creature unlock initialization "+library);
  Console.WriteLine("Verified all equipment/personal-trait unlock gates and gold-only development payment boundaries.");
  Console.WriteLine("Verified production, shipping, diplomacy, succession, equipment and genome routing.");}
 }

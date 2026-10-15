@@ -7,3 +7,5 @@
 - [逐项需求对应](modding/RequirementsCoverage.md)
 - [已发布安装兼容版 v0.3.1-alpha](https://github.com/RT-C-6668882025/worldbox/releases/tag/v0.3.1-alpha)：旧发布包，不包含上述最新开发改动。
 - [原始安装包](https://github.com/RT-C-6668882025/worldbox/releases/download/apk-upload-20261014/worldbox.apk)
+
+动物、生物、怪物图鉴及个人/亚种词条已统一解锁，保留原生互斥和适用性规则。
