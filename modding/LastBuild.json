@@ -1,14 +1,21 @@
 {
+  "android_native_helpers": {
+    "libmono-native.so": "5f7247ea5e01a3646bc4eafc6f02cf7e78259be9af336478ab7cfd252d16d288",
+    "libMonoPosixHelper.so": "318fd5f91ed99b481f29f53943d4491bd871642813bd64d5c4e1589c6e6a807b",
+    "libmono-btls-shared.so": "688dea64455a2155b65491070b873bb3a9790cb900a737fdfe9a5a5cc52d8dcf",
+    "libmono-ee-interp.so": "5725317f15d8b2b7052d3c88094bd9099efc8bedf318f1062fae5d00bc8fd166",
+    "libMonoSupportW.so": "99cd41f2db136133d3b7748e56994c1c803f353ea89c209349f2b36d02a5a701"
+  },
   "typed_il_validation": {
     "no_new_typed_il_errors": true,
     "original_unsafe_il_baseline": 24
   },
-  "runtime_cache_id": "mcye",
+  "runtime_cache_id": "6ara",
   "unity_extension_assembly_registered": true,
   "source_sha256": "c39817efa21e539fe61f318dc1ad4050b424c6120ab8ed384d94148f869c4bdc",
-  "output_sha256": "ccaba767c8447f3b80f340c79af2596d43bbbfc76c3ef5a55e663465188ba386",
-  "output": "worldbox-install-compat.apk",
-  "helper_sha256": "acfc6563162abc35901ea42087f0d40cddffb4da502986eae19d1a27c622801e",
+  "output_sha256": "94eb471bd3c59bc1f2bc0148ebf5cf6b84b68b238ddd1d6b4207558ed4293190",
+  "output": "/workspace/scratch/2bfe259058cc/worldbox-native-runtime-fix/worldbox-economy-native-alpha.apk",
+  "helper_sha256": "9e5225a4dd068d1f63fe11c278b7adc6a7302939aa9d64eb6a2ac79f6d6ae89f",
   "tests": {
     "economic": 41,
     "native_adapter_standins": 114,
@@ -20,49 +27,5 @@
     "native_money_routing": true,
     "native_systems_routing": true
   },
-  "android_runtime_tested": false,
-  "validation": {
-    "whole_apk_crc": true,
-    "nested_managed_crc": true,
-    "same_signing_certificate": true,
-    "manifest_resources_alignment": true,
-    "content_versioned_native_cache": true,
-    "unity_extension_registered": true,
-    "no_new_typed_il_errors": true,
-    "visible_loading_stage_and_exception_diagnostics": true,
-    "native_weapon_sprite_paths_restored_after_post_init": true,
-    "android_runtime_tested": false
-  },
-  "source_files": {
-    "BootDiagnostics.cs": "74711b9f6d8f72f79b8cb9e8903558dea341747a782c5ecb2c429f20205bee4c",
-    "BootDiagnosticsTests.cs": "31a03e81e4d26552f35f828be62e61abb725b3881bec77cc7fd31b105f657aa3",
-    "CurrencyScope.cs": "68b3b511b5e576d9e452bf4c774b4d47e86a95a23db25e57e012da0c26465f26",
-    "EconomyModel.cs": "b149bcf5807eef415927188994549234c21f6e2332e122641fa03fea9f823784",
-    "EconomyModelTests.cs": "1d44a022083036493777837d4a25d6c14d0bb990023a2a0712c623bd7ba776ae",
-    "GodWorldRuntime.cs": "0f55ea6d1eb63e643eebcc907e099c2fe9bc7475f1e82ccf4a7eff6aff7d7154",
-    "IndustrialAppearance.cs": "df2fde74f209e6406c8af97e01a1944317aef4ed01dd6dfa6cbec3da6b67f305",
-    "IntegrationRules.cs": "fd71fa2eab839ee1eb21a2a3880389d40210f85f9e14c78592bbb74db9263f78",
-    "IntegrationRulesTests.cs": "86acac727286bc4c98390e02172a3c9599d794ee32a9dde9c50a2cd2f9771e8c",
-    "LifecyclePolicy.cs": "b695886308b169fc580807a586cd5b247cbcb232b9537431ffd844ba77de3860",
-    "NativeEconomyEditors.cs": "feb04f95dcc48482e5dcf251b30ac0ea75d1eb46c1f6cd618a7a4ea7935ed017",
-    "NativeEconomyUI.cs": "a49c565d7d3f7c1134c85d1861545bed832a044a9ad2bb74f4cba7f272ab97f9",
-    "NativeLifecycle.cs": "68f34f23ad4291a3a82befbee10f88b0d72b9ff2df76b5ae03fb9e52d333fbf6",
-    "NativeOrganizationEditor.cs": "daeaa86e76c2f6b79ca11a7430fc92e243e95d585d6c37060a40f82f47b2065e",
-    "NativeOrganizations.cs": "b32cb06bb9add6dcf02585f17dc84adabbe8b41b7adb98eaf38fbc046b04007a",
-    "NativeProgression.cs": "a51d5a5f28797aa6c40694da352aae07baa639da45466e78e612aafc0dc91946",
-    "NativeSystems.cs": "a8f42d2bb87ec19be2be2e4b690307f22b80dfbaf5dd6a3f746fa8defd0c27db",
-    "NativeUnlocks.cs": "c7dabf4b40aaa92db0a5d0536326b8596f7626239138d3648111981a88b60171",
-    "OrganizationTests.cs": "ff72c7f5f22bc2887912ee5583f31b970689e76a3b6a27fdc5602b809ae2aecc",
-    "Patch.cs": "b04e70aa8b0009365329afc6ffc93ee504fd9fb5790c43db7db55a92d6251728",
-    "RebellionRules.cs": "f16a6ec46c008ccc69ff1c246839b0fa02c5fb586001eb5263d5fd58d558f4c5",
-    "RenderTests.cs": "2ef92e73ed4a31d104354be2c116613be317aee14a6aac55f4379558adcd8937",
-    "RuntimeTests.cs": "0b4c054ebf28c46ad0bf09b2c2b23b6d940ae7cd4d777e4a76f90fcedc39a3c4",
-    "UnlockTests.cs": "f84b6a084fd42fdc4f04ef6d386967feec8fe89e35b8c8830d812ae6a964036a",
-    "VerifyIL.cs": "3f203daa45ed46e95a2f0b9c92812d8876f9af67b2f98b120d49e36881ead8c6",
-    "build.py": "9c1f9e909a6fffcd81d3890436094c507021fa8eb1893349bcea31b0146a08cf",
-    "install_compat.py": "2231e839bd7ac04a15d0f9a03491784ceab8a7177c291248a0d8471de1186ea6",
-    "repack.py": "937a2f7ada8585c6e97be0eddecfbcce458740175d2dcbfdfaf0e357361f5ab2",
-    "runtime_cache.py": "567ea7cd805ff79484d2e12a7ee94bb711d98d75837e38dfeb7321b3c9e604e7",
-    "verify_types.py": "66b04d657d09e7a7aa0e8c2fdb94d147e72d91cc862b41729d43fc190966bab9"
-  }
+  "android_runtime_tested": false
 }

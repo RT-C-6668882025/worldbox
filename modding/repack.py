@@ -1,6 +1,7 @@
 import io,zipfile,struct,sys
 from pathlib import Path
 from install_compat import prepare_manifest
+from native_support import helpers
 from runtime_cache import cache_id,patch_bridge,scripting_manifest
 source,assembly,helper,destination=sys.argv[1:]
 identifier=cache_id(Path(assembly).read_bytes(),Path(helper).read_bytes())
@@ -12,6 +13,7 @@ with zipfile.ZipFile(source) as apk:
    data=Path(assembly).read_bytes() if item.filename=="Assembly-CSharp.dll" else managed.read(item)
    target.writestr(item,data)
   target.writestr("RebellionRules.dll",Path(helper).read_bytes())
+ native_helpers=helpers(apk)
  with zipfile.ZipFile(destination,"w") as result:
   for item in apk.infolist():
    if item.filename.startswith("META-INF/") and (item.filename.endswith((".SF",".RSA",".DSA",".EC")) or item.filename=="META-INF/MANIFEST.MF"):continue
@@ -30,3 +32,6 @@ with zipfile.ZipFile(source) as apk:
     while pad and pad<6:pad+=align
     if pad:item.extra=struct.pack("<HHH",0xd935,pad-4,align)+bytes(pad-6)
    result.writestr(item,data)
+
+  for name,data in native_helpers.items():
+   result.writestr("lib/arm64-v8a/"+name,data,compress_type=zipfile.ZIP_DEFLATED)

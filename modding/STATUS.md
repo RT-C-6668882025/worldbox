@@ -1,3 +1,11 @@
+## 0.4.4 — 修复截图确认的 System.Native 加载失败
+
+实机 0.4.3 截图确认 LoadingScreen.Awake 阶段出现 DllNotFoundException: System.Native，随后 Interop.Sys 初始化失败，FileSystem.FileExists 无法执行。
+
+原 APK 的 Mono 压缩包包含 ARM64 libmono-native.so 等五个辅助库，但它们没有安装在 Android 标准原生库目录。保留原文件，额外将原包的五个库逐字节安装至 lib/arm64-v8a；在诊断入口任何 System.IO 调用之前，用 Android applicationInfo.nativeLibraryDir 和 Mono 官方导出的 mono_dllmap_insert 建立明确的全路径映射，涵盖 System.Native、System.Net.Security.Native、MonoPosixHelper 和 BTLS。原清单 extractNativeLibs=true，系统负责解压这些库。
+
+核对原始 mscorlib 的 28 个 System.Native 导入，库中全部有对应导出。构建强制验证 ARM64 ELF、必要导出及打包字节一致性。258 项检查及完整类型验证通过；仍需手机启动验证，不宣称已进入游戏。保留 0.4.4 加载诊断与失败信息。
+
 # 原生经济与社会系统开发版
 
 本轮按缺口清单补充原生流程，保留原生窗口、地图操作、存档系统与 ARM64 基础包。当前源码在 PR #1，尚未合并或发布为正式版本。
