@@ -1,8 +1,10 @@
 {
+  "runtime_cache_id": "jolj",
+  "unity_extension_assembly_registered": true,
   "source_sha256": "c39817efa21e539fe61f318dc1ad4050b424c6120ab8ed384d94148f869c4bdc",
-  "output_sha256": "cb0a4a826c83b803e54dd406d9a2dda31f02f0e2b6b72b48a572421c9a6d1363",
+  "output_sha256": "1792d170630bf88819c1179c37a6c5e9364d97ff7c4b22ae9aeb74bfd95ab758",
   "output": "worldbox-install-compat.apk",
-  "helper_sha256": "213cadef855ce7493205e8f5ce2824076af258eeb658f3b9dbf7a9810fc99cec",
+  "helper_sha256": "bf8d1dd2f962b00060905ee91fcd88e5bda6e87d3bbc890ba9114b5b8429052a",
   "tests": {
     "economic": 41,
     "native_adapter_standins": 112,
@@ -18,15 +20,12 @@
     "whole_apk_crc": true,
     "nested_managed_crc": true,
     "same_signing_certificate": true,
-    "manifest_resources_uncompressed_and_aligned": true,
+    "manifest_resources_alignment": true,
+    "native_library_packaging_preserved": true,
+    "native_loader_uses_content_versioned_cache_directory": true,
+    "native_bridge_only_four_string_bytes_changed": true,
+    "unity_extension_registered": true,
     "deferred_unlock_after_all_asset_linking": true,
-    "no_bulk_unlock_inside_individual_library_init": true,
-    "organization_editors_and_rank_scheduler": true,
-    "native_organization_edit_api_signatures": true,
-    "native_tax_override_routing": true,
-    "custom_personal_skill_xp_removed": true,
-    "gold_only_development_payments": true,
-    "manual_exchange_only": true,
     "android_runtime_tested": false
   },
   "source_files": {
@@ -53,8 +52,9 @@
     "RuntimeTests.cs": "4f659159ed59e78e047ef0c739ff52bfac87f5d392b7ba78876b54a6660eb7c8",
     "UnlockTests.cs": "f84b6a084fd42fdc4f04ef6d386967feec8fe89e35b8c8830d812ae6a964036a",
     "VerifyIL.cs": "b08488f447be8b2c4f153ec7e05b999e5b39569cfc208a0dc8782e5971bd354c",
-    "build.py": "4b101460adc8c1407b8848de5b11dffe6843eba36c8dcafcc766301474b1c829",
+    "build.py": "375905ade640dfbb1ca178082b3b3ae00cf5723ed83fd3042f9d5d387bb6fc26",
     "install_compat.py": "2231e839bd7ac04a15d0f9a03491784ceab8a7177c291248a0d8471de1186ea6",
-    "repack.py": "fc3e0e757f20844214e4c262fc1c31586a145615e0ed80c0fab087a69884201a"
+    "repack.py": "937a2f7ada8585c6e97be0eddecfbcce458740175d2dcbfdfaf0e357361f5ab2",
+    "runtime_cache.py": "567ea7cd805ff79484d2e12a7ee94bb711d98d75837e38dfeb7321b3c9e604e7"
   }
 }

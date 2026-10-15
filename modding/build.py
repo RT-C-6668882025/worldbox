@@ -58,12 +58,14 @@ def main():
   if check.testzip() is not None:raise SystemExit('Signed APK has a corrupt ZIP member.')
   with zipfile.ZipFile(io.BytesIO(check.read('assets/Mono/Managed.zip'))) as nested:
    if hashlib.sha256(nested.read('RebellionRules.dll')).hexdigest()!=sha(out/'RebellionRules.dll'):raise SystemExit('Embedded helper differs from the verified build.')
+ from runtime_cache import verify_runtime
+ runtime_id=verify_runtime(temporary,apk,(out/'Assembly-CSharp.patched.dll').read_bytes(),(out/'RebellionRules.dll').read_bytes())
  staged=out/("verified-"+uuid.uuid4().hex+".apk")
  with temporary.open("rb") as source,staged.open("wb") as target:
   shutil.copyfileobj(source,target,1024*1024);target.flush();os.fsync(target.fileno())
  if sha(staged)!=sha(temporary):raise SystemExit("Signed APK transfer hash mismatch.")
  os.replace(staged,signed);signing_dir.cleanup()
- receipt={'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'unlock':int(re.search(r'(\d+) unlock checks passed',unlock_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
+ receipt={'runtime_cache_id':runtime_id,'unity_extension_assembly_registered':True,'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'unlock':int(re.search(r'(\d+) unlock checks passed',unlock_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt,indent=2))
 if __name__=='__main__':main()
 

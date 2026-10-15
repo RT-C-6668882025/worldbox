@@ -1,7 +1,9 @@
 import io,zipfile,struct,sys
 from pathlib import Path
 from install_compat import prepare_manifest
+from runtime_cache import cache_id,patch_bridge,scripting_manifest
 source,assembly,helper,destination=sys.argv[1:]
+identifier=cache_id(Path(assembly).read_bytes(),Path(helper).read_bytes())
 with zipfile.ZipFile(source) as apk:
  raw=apk.read("assets/Mono/Managed.zip")
  out=io.BytesIO()
@@ -15,6 +17,8 @@ with zipfile.ZipFile(source) as apk:
    if item.filename.startswith("META-INF/") and (item.filename.endswith((".SF",".RSA",".DSA",".EC")) or item.filename=="META-INF/MANIFEST.MF"):continue
    if item.filename.endswith('/.DS_Store') or item.filename.startswith('__MACOSX/'):continue
    data=out.getvalue() if item.filename=="assets/Mono/Managed.zip" else apk.read(item)
+   if item.filename=='lib/arm64-v8a/libil2cpp.so':data=patch_bridge(data,identifier)
+   if item.filename=='assets/bin/Data/ScriptingAssemblies.json':data=scripting_manifest(data)
    if item.filename=='AndroidManifest.xml':
     data=prepare_manifest(data)
     item.compress_type=zipfile.ZIP_STORED
