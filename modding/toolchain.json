@@ -14,5 +14,9 @@
   "apksig.jar": {
     "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/apksig/8.2.2/apksig-8.2.2.jar",
     "sha256": "468ee1852fa12461c6629608fe47be70e50f60be7c4744bb7f62ca48e85c0a6c"
+  },
+  "ilverify.nupkg": {
+    "url": "https://api.nuget.org/v3-flatcontainer/dotnet-ilverify/8.0.0/dotnet-ilverify.8.0.0.nupkg",
+    "sha256": "a4ee8e509ad175776191b687294b7b0e047e645e7dfba0d8911faa1c66ab3a42"
   }
 }

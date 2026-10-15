@@ -27,7 +27,7 @@ def main():
    (tools/'dotnet').mkdir(exist_ok=True);run('tar','--no-same-owner','-xzf',tools/'dotnet.tar.gz','-C',tools/'dotnet')
   with zipfile.ZipFile(tools/'cecil.nupkg') as z:z.extract('lib/netstandard2.0/Mono.Cecil.dll',tools/'cecil')
  dotnet=tools/'dotnet/dotnet';sdk=tools/'dotnet/sdk/8.0.100';csc=sdk/'Roslyn/bincore/csc.dll';cecil=tools/'cecil/lib/netstandard2.0/Mono.Cecil.dll'
- for name in ['cecil.nupkg','ecj.jar','apksig.jar']:
+ for name in ['cecil.nupkg','ecj.jar','apksig.jar','ilverify.nupkg']:
   if not (tools/name).exists() or sha(tools/name)!=pins[name]['sha256']:raise SystemExit('Missing or unverified tool '+name+' (use --fetch-tools).')
  managed=out/'managed';managed.mkdir(exist_ok=True)
  with zipfile.ZipFile(apk) as z:
@@ -37,13 +37,17 @@ def main():
  def compile(name,sources,reference,exe=True):
   rsp=out/(name+'.rsp');rsp.write_text('\n'.join(['-nostdlib+','-target:'+('exe' if exe else 'library'),'-out:'+str(out/(name+'.dll'))]+['-r:'+str(r) for r in reference]+[str(ROOT/s) for s in sources]));run(dotnet,csc,'@'+str(rsp))
   if exe:(out/(name+'.runtimeconfig.json')).write_text(json.dumps(runtime))
- compile('RebellionRules',['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','NativeUnlocks.cs','NativeOrganizationEditor.cs','IndustrialAppearance.cs','IntegrationRules.cs','NativeSystems.cs','NativeProgression.cs','NativeOrganizations.cs','NativeEconomyUI.cs','NativeEconomyEditors.cs','CurrencyScope.cs','GodWorldRuntime.cs'],list(managed.glob('*.dll')),False)
+ compile('RebellionRules',['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','NativeUnlocks.cs','BootDiagnostics.cs','NativeOrganizationEditor.cs','IndustrialAppearance.cs','IntegrationRules.cs','NativeSystems.cs','NativeProgression.cs','NativeOrganizations.cs','NativeEconomyUI.cs','NativeEconomyEditors.cs','CurrencyScope.cs','GodWorldRuntime.cs'],list(managed.glob('*.dll')),False)
  shutil.copy(cecil,out/'Mono.Cecil.dll');compile('Patch',['Patch.cs'],refs+[cecil]);run(dotnet,out/'Patch.dll',managed/'Assembly-CSharp.dll',out/'RebellionRules.dll',managed,out/'Assembly-CSharp.patched.dll')
  compile('VerifyIL',['VerifyIL.cs'],refs+[cecil]);verify_log=run(dotnet,out/'VerifyIL.dll',out/'Assembly-CSharp.patched.dll',managed)
+ with zipfile.ZipFile(tools/'ilverify.nupkg') as z:z.extractall(out/'ilverify')
+ from verify_types import verify
+ typed_validation=verify(dotnet,out/'ilverify/tools/net8.0/any/ILVerify.dll',managed,out/'Assembly-CSharp.patched.dll',out/'RebellionRules.dll',out)
  shutil.copy(managed/'Newtonsoft.Json.dll',out/'Newtonsoft.Json.dll')
  compile('EconomyTests',['EconomyModel.cs','LifecyclePolicy.cs','EconomyModelTests.cs'],refs);economy_log=run(dotnet,out/'EconomyTests.dll')
  compile('IntegrationTests',['IntegrationRules.cs','IntegrationRulesTests.cs'],refs);integration_log=run(dotnet,out/'IntegrationTests.dll')
  compile('RuntimeTests',['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','IntegrationRules.cs','NativeProgression.cs','NativeOrganizations.cs','NativeEconomyUI.cs','CurrencyScope.cs','GodWorldRuntime.cs','RuntimeTests.cs','OrganizationTests.cs'],refs+[out/'Newtonsoft.Json.dll']);runtime_log=run(dotnet,out/'RuntimeTests.dll')
+ compile('BootDiagnosticsTests',['BootDiagnostics.cs','BootDiagnosticsTests.cs'],refs);boot_log=run(dotnet,out/'BootDiagnosticsTests.dll')
  compile('UnlockTests',['NativeUnlocks.cs','UnlockTests.cs'],refs);unlock_log=run(dotnet,out/'UnlockTests.dll')
  render_sources=['RebellionRules.cs','EconomyModel.cs','LifecyclePolicy.cs','NativeLifecycle.cs','IntegrationRules.cs','NativeProgression.cs','NativeOrganizations.cs','NativeEconomyUI.cs','CurrencyScope.cs','GodWorldRuntime.cs','RuntimeTests.cs','OrganizationTests.cs','IndustrialAppearance.cs','RenderTests.cs']
  render_rsp=out/'RenderTests.rsp';render_rsp.write_text('\n'.join(['-nostdlib+','-target:exe','-define:RENDER_TESTS','-main:RenderTests','-out:'+str(out/'RenderTests.dll')]+['-r:'+str(r) for r in refs+[out/'Newtonsoft.Json.dll']]+[str(ROOT/s) for s in render_sources]));run(dotnet,csc,'@'+str(render_rsp));(out/'RenderTests.runtimeconfig.json').write_text(json.dumps(runtime));render_log=run(dotnet,out/'RenderTests.dll',out/'sprite-preview')
@@ -65,7 +69,7 @@ def main():
   shutil.copyfileobj(source,target,1024*1024);target.flush();os.fsync(target.fileno())
  if sha(staged)!=sha(temporary):raise SystemExit("Signed APK transfer hash mismatch.")
  os.replace(staged,signed);signing_dir.cleanup()
- receipt={'runtime_cache_id':runtime_id,'unity_extension_assembly_registered':True,'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'unlock':int(re.search(r'(\d+) unlock checks passed',unlock_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
+ receipt={'typed_il_validation':typed_validation,'runtime_cache_id':runtime_id,'unity_extension_assembly_registered':True,'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':int(re.search(r'(\d+) economic checks passed',economy_log)[1]),'native_adapter_standins':int(re.search(r'(\d+) native-adapter checks passed',runtime_log)[1]),'integration_policy':int(re.search(r'(\d+) native integration policy checks passed',integration_log)[1]),'hook_stack_graphs':int(re.search(r'Verified (\d+) hooked',verify_log)[1]),'unlock':int(re.search(r'(\d+) unlock checks passed',unlock_log)[1]),'boot_diagnostics':int(re.search(r'(\d+) boot diagnostic checks passed',boot_log)[1]),'headless_render':int(re.search(r'(\d+) headless render checks passed',render_log)[1]),'native_money_routing':True,'native_systems_routing':True},'android_runtime_tested':False}
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt,indent=2))
 if __name__=='__main__':main()
 
