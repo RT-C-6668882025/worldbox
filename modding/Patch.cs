@@ -43,8 +43,20 @@ class Patch {
   var check=M("ItemCrafting","hasEnoughResourcesToCraft");original=check.Body.Instructions.First();Prefix(check,Arg(0),Arg(1),Arg(2),Call("NativeProgression","AllowEquipment"),Instruction.Create(OpCodes.Brtrue,original),Instruction.Create(OpCodes.Ldc_I4_0),Instruction.Create(OpCodes.Ret));
   var delivery=M("Actor","giveInventoryResourcesToCity");il=delivery.Body.GetILProcessor();foreach(var call in delivery.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).Name=="addResourcesToRandomStockpile").ToArray()){il.InsertBefore(call,Arg(0));call.OpCode=OpCodes.Call;call.Operand=H("GodWorldRuntime","Deliver");}changed.Add(delivery);
   End(M("Actor","increaseKills"),()=>new[]{Arg(0),Call("GodWorldRuntime","CombatWork")});
-  var salary=M("Actor","addMoney");Prefix(salary,Arg(0),Arg(1),Call("GodWorldRuntime","PayNativeSalary"),Instruction.Create(OpCodes.Starg,salary.Parameters[0]));
-  var spend=M("Actor","spendMoney");Prefix(spend,Arg(0),Arg(1),Call("GodWorldRuntime","RecordSpend"),Instruction.Create(OpCodes.Starg,spend.Parameters[0]));
+  // Fund production only; settlement, tax transfers, gifts and stolen money
+  // retain the native addMoney/addLoot transfer path without another charge.
+  foreach(var pair in new[]{new[]{"BehClaimZoneForCityActorBorder","tryClaimZone"},new[]{"BehGenerateLootFromHouse","execute"},new[]{"BehBuildTarget","execute"},new[]{"BehCityActorCreateRoad","execute"},new[]{"BehCityActorFertilizeCrop","execute"},new[]{"BehGetResourcesFromMine","execute"},new[]{"BehMakeFarm","execute"},new[]{"BehPlantCrops","execute"},new[]{"BehRemoveRuins","execute"},new[]{"BehThrowResources","execute"}}){
+   var earning=M(pair[0],pair[1]);var calls=earning.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).DeclaringType.Name=="Actor"&&((MethodReference)x.Operand).Name=="addLoot").ToArray();if(calls.Length==0)throw new Exception("Missing native income event "+earning.FullName);
+   foreach(var c in calls){c.OpCode=OpCodes.Call;c.Operand=H("GodWorldRuntime","EarnNativeIncome");}changed.Add(earning);
+  }
+  foreach(var pair in new[]{new[]{"ItemCrafting","craftItem","SpendCommerce"},new[]{"BehTryToEatCityFood","eatFood","SpendCommerce"},new[]{"BehRepairEquipment","execute","SpendCommerce"},new[]{"BehLaunchFireworks","execute","SpendCommerce"},new[]{"PlotManager","newPlot","SpendPolitics"}}){
+   var purchase=M(pair[0],pair[1]);var calls=purchase.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).DeclaringType.Name=="Actor"&&((MethodReference)x.Operand).Name=="spendMoney").ToArray();if(calls.Length==0)throw new Exception("Missing native expense "+purchase.FullName);
+   foreach(var c in calls){c.OpCode=OpCodes.Call;c.Operand=H("GodWorldRuntime",pair[2]);}changed.Add(purchase);
+  }
+  var gift=M("BehFinishTalk","makeGift");il=gift.Body.GetILProcessor();var giftAmount=gift.Body.Instructions.Single(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).Name=="getMoneyForGift");After(il,giftAmount,new[]{Arg(1),Arg(2),Call("GodWorldRuntime","PrepareGift")});changed.Add(gift);
+  // Preserve native bounds while removing the old 99,999-personal-coin cap.
+  foreach(var name in new[]{"addMoney","addLoot"}){var credit=M("Actor",name);foreach(var i in credit.Body.Instructions){if(i.OpCode==OpCodes.Add){i.OpCode=OpCodes.Call;i.Operand=H("GodWorldRuntime","SaturatingResourceSum");}else if(i.OpCode==OpCodes.Ldc_I4&&(int)i.Operand==99999)i.Operand=Int32.MaxValue;}changed.Add(credit);}
+  Result(M("BehFinishReading","execute"),n=>new[]{Arg(1),Instruction.Create(OpCodes.Ldloc,n),Call("NativeProgression","AfterReading"),Instruction.Create(OpCodes.Ldloc,n)});
   Prefix(M("Actor","die"),Arg(0),Call("GodWorldRuntime","BeforeDeath"));
   var change=M("CityResources","change");Prefix(change,Arg(0),Arg(1),Arg(2),Call("GodWorldRuntime","SafeResourceDelta"),Instruction.Create(OpCodes.Starg,change.Parameters[1]));
   End(M("ResourceLibrary","post_init"),()=>new[]{Arg(0),Call("GodWorldRuntime","UnlockResources")});
