@@ -3,7 +3,7 @@
     "preserved_method_bodies": 53089,
     "preserved_native_entrypoint_signatures": 535,
     "embedded_assemblies": {
-      "System.dll": "c1beaef5e2ee8d4df1f015bdea8e8487a089ef55453c6c37b98680629f4eb90c",
+      "System.dll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "mscorlib.dll": "8b1035b5d13be88cfc19ddcdc42e6a4c12309a82e0dd4891399f4439346fd2c7",
       "System.Core.dll": "e1ec097d1a05cb3f6c2f4eef26a5ddfc724843654a058be1a100b20915a1e3b3",
       "System.IO.Compression.dll": "76e87ee45f23ce1fbcd57530920553ab8ddae3664547904ee93daf26c9e18f3d"
@@ -20,19 +20,19 @@
     "no_new_typed_il_errors": true,
     "original_unsafe_il_baseline": 24
   },
-  "runtime_cache_id": "mqmd",
+  "runtime_cache_id": "h3sf",
   "unity_extension_assembly_registered": true,
   "source_sha256": "c39817efa21e539fe61f318dc1ad4050b424c6120ab8ed384d94148f869c4bdc",
-  "output_sha256": "758dcf77094ee33ebf0a0eff4430e7acd9a7017c4e3daa0ddb6450a2844c1b5a",
-  "output": "/workspace/scratch/2bfe259058cc/worldbox-048-verified/worldbox-economy-native-alpha.apk",
-  "helper_sha256": "1b282cc03f0a05bed5f1e43a3617b808e99883e1fb21540514f213f44cbbd4b1",
+  "output_sha256": "ad00d6d5209992811344a131b0368f3ecdb5d281377f15b7f20ac210a8d6b0af",
+  "output": "/workspace/scratch/2bfe259058cc/worldbox-049-lifecycle/worldbox-economy-native-alpha.apk",
+  "helper_sha256": "d81045f459b3636863de8fab156af5b628b2122ae7aad74dc47017f0d4850dbb",
   "tests": {
     "economic": 41,
     "native_adapter_standins": 114,
     "integration_policy": 39,
     "hook_stack_graphs": 95,
     "unlock": 27,
-    "currency_panel": 18,
+    "currency_panel": 22,
     "boot_diagnostics": 8,
     "headless_render": 33,
     "native_money_routing": true,
