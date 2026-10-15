@@ -47,7 +47,7 @@ class Patch {
   // retain the native addMoney/addLoot transfer path without another charge.
   foreach(var pair in new[]{new[]{"BehClaimZoneForCityActorBorder","tryClaimZone"},new[]{"BehGenerateLootFromHouse","execute"},new[]{"BehBuildTarget","execute"},new[]{"BehCityActorCreateRoad","execute"},new[]{"BehCityActorFertilizeCrop","execute"},new[]{"BehGetResourcesFromMine","execute"},new[]{"BehMakeFarm","execute"},new[]{"BehPlantCrops","execute"},new[]{"BehRemoveRuins","execute"},new[]{"BehThrowResources","execute"}}){
    var earning=M(pair[0],pair[1]);var calls=earning.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).DeclaringType.Name=="Actor"&&((MethodReference)x.Operand).Name=="addLoot").ToArray();if(calls.Length==0)throw new Exception("Missing native income event "+earning.FullName);
-   foreach(var c in calls){c.OpCode=OpCodes.Call;c.Operand=H("GodWorldRuntime","EarnNativeIncome");}changed.Add(earning);
+   foreach(var c in calls){c.OpCode=OpCodes.Call;c.Operand=H("NativeSystems","Earn");}changed.Add(earning);
   }
   foreach(var pair in new[]{new[]{"ItemCrafting","craftItem","SpendCommerce"},new[]{"BehTryToEatCityFood","eatFood","SpendCommerce"},new[]{"BehRepairEquipment","execute","SpendCommerce"},new[]{"BehLaunchFireworks","execute","SpendCommerce"},new[]{"PlotManager","newPlot","SpendPolitics"}}){
    var purchase=M(pair[0],pair[1]);var calls=purchase.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).DeclaringType.Name=="Actor"&&((MethodReference)x.Operand).Name=="spendMoney").ToArray();if(calls.Length==0)throw new Exception("Missing native expense "+purchase.FullName);
@@ -57,6 +57,25 @@ class Patch {
   // Preserve native bounds while removing the old 99,999-personal-coin cap.
   foreach(var name in new[]{"addMoney","addLoot"}){var credit=M("Actor",name);foreach(var i in credit.Body.Instructions){if(i.OpCode==OpCodes.Add){i.OpCode=OpCodes.Call;i.Operand=H("GodWorldRuntime","SaturatingResourceSum");}else if(i.OpCode==OpCodes.Ldc_I4&&(int)i.Operand==99999)i.Operand=Int32.MaxValue;}changed.Add(credit);}
   Result(M("BehFinishReading","execute"),n=>new[]{Arg(1),Instruction.Create(OpCodes.Ldloc,n),Call("NativeProgression","AfterReading"),Instruction.Create(OpCodes.Ldloc,n)});
+  Result(M("Actor","getConstructionSpeed"),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeSystems","Construction")});
+  End(M("City","updateCityStatus"),()=>new[]{Arg(0),Call("NativeSystems","CityYear")});
+  var produce=M("CityBehProduceResources","tryToProduce");original=produce.Body.Instructions.First();Prefix(produce,Arg(1),Arg(2),Call("NativeSystems","CanProcess"),Instruction.Create(OpCodes.Brtrue,original),Instruction.Create(OpCodes.Ldc_I4_0),Instruction.Create(OpCodes.Ret));
+  foreach(var c in produce.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).Name=="addResourcesToRandomStockpile").ToArray()){c.OpCode=OpCodes.Call;c.Operand=H("NativeSystems","Produced");}changed.Add(produce);
+  var supply=M("CityBehSupplyKingdomCities","shareResource");supply.Body.Instructions.Clear();supply.Body.ExceptionHandlers.Clear();supply.Body.Variables.Clear();foreach(var c in new[]{Arg(1),Arg(2),Arg(3),Call("NativeSystems","Supply"),Instruction.Create(OpCodes.Ret)})supply.Body.Instructions.Add(c);changed.Add(supply);
+  var trade=M("BehBoatMakeTrade","execute");trade.Body.Instructions.Clear();trade.Body.ExceptionHandlers.Clear();trade.Body.Variables.Clear();foreach(var c in new[]{Arg(1),Call("NativeSystems","BoatTrade"),Instruction.Create(OpCodes.Ldc_I4_0),Instruction.Create(OpCodes.Ret)})trade.Body.Instructions.Add(c);changed.Add(trade);
+  Result(M("SuccessionTool","getKingFromRoyalClan"),n=>new[]{Arg(0),Arg(1),Instruction.Create(OpCodes.Ldloc,n),Call("NativeSystems","RoyalHeir")});
+  Result(M("SuccessionTool","getKingFromLeaders"),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeSystems","LeaderHeir")});
+  End(M("Kingdom","setKing"),()=>new[]{Arg(0),Arg(1),Call("NativeSystems","Crowned")});
+  foreach(var name in new[]{"getLoyalty","getCachedLoyalty"})Result(M("City",name),n=>new[]{Arg(0),Instruction.Create(OpCodes.Ldloc,n),Call("NativeSystems","Loyalty")});
+  End(M("Alliance","update"),()=>new[]{Arg(0),Call("NativeSystems","UpdateAlliance")});
+  Prefix(M("Alliance","leave"),Arg(0),Arg(1),Call("NativeSystems","LeaveAlliance"));
+  Prefix(M("Alliance","dissolve"),Arg(0),Call("NativeSystems","DissolveAlliance"));
+  foreach(var pair in new[]{new[]{"setUnitHasIt","ItemOwner"},new[]{"setInCityStorage","ItemStorage"}})End(M("Item",pair[0]),()=>new[]{Arg(0),Arg(1),Call("NativeSystems",pair[1])});
+  End(M("Item","reforge"),()=>new[]{Arg(0),Call("NativeSystems","Reforged")});
+  var wear=M("Item","getDamaged");Prefix(wear,Arg(1),Arg(0),Call("NativeSystems","Wear"),Instruction.Create(OpCodes.Starg,wear.Parameters[0]));
+  var repair=M("BehRepairEquipment","execute");foreach(var c in repair.Body.Instructions.Where(x=>x.Operand is MethodReference&&((MethodReference)x.Operand).Name=="fullRepair").ToArray()){c.OpCode=OpCodes.Call;c.Operand=H("NativeSystems","Repair");}changed.Add(repair);
+  End(M("Subspecies","genesChangedEvent"),()=>new[]{Arg(0),Call("NativeSystems","GenomeChanged")});
+  foreach(var pair in new[]{new[]{"CityWindow","ShowCity"},new[]{"KingdomWindow","ShowKingdom"},new[]{"AllianceWindow","ShowAlliance"},new[]{"ItemWindow","ShowItem"},new[]{"SubspeciesWindow","ShowSubspecies"}})End(M(pair[0],"showStatsRows"),()=>new[]{Arg(0),Call("NativeSystems",pair[1])});
   Prefix(M("Actor","die"),Arg(0),Call("GodWorldRuntime","BeforeDeath"));
   var change=M("CityResources","change");Prefix(change,Arg(0),Arg(1),Arg(2),Call("GodWorldRuntime","SafeResourceDelta"),Instruction.Create(OpCodes.Starg,change.Parameters[1]));
   End(M("ResourceLibrary","post_init"),()=>new[]{Arg(0),Call("GodWorldRuntime","UnlockResources")});
