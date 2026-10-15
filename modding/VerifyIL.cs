@@ -14,5 +14,12 @@ class VerifyIL {
  }
  static void Main(string[] args){var resolver=new DefaultAssemblyResolver();resolver.AddSearchDirectory(args[1]);var a=AssemblyDefinition.ReadAssembly(args[0],new ReaderParameters{AssemblyResolver=resolver});int checkedMethods=0;
  foreach(var t in a.MainModule.Types)foreach(var m in t.Methods){if(!m.HasBody)continue;if(!m.Body.Instructions.Any(i=>i.Operand is MethodReference && ((MethodReference)i.Operand).DeclaringType.Scope.Name=="RebellionRules"))continue;Check(m);checkedMethods++;}
- if(checkedMethods<20)throw new Exception("Too few injected method bodies");Console.WriteLine("Verified "+checkedMethods+" hooked method stack graphs.");}
+ if(checkedMethods<20)throw new Exception("Too few injected method bodies");Console.WriteLine("Verified "+checkedMethods+" hooked method stack graphs.");
+ var types=a.MainModule.Types;Func<string,string,MethodDefinition> Find=(t,n)=>types.Single(x=>x.Name==t).Methods.Single(x=>x.Name==n);
+ Func<MethodDefinition,string,int> Calls=(m,n)=>m.Body.Instructions.Count(i=>i.Operand is MethodReference&&((MethodReference)i.Operand).Name==n);
+ foreach(var name in new[]{"addMoney","spendMoney"})if(Find("Actor",name).Body.Instructions.Any(i=>i.Operand is MethodReference&&new[]{"PayNativeSalary","RecordSpend","FundNativeIncome","EarnNativeIncome"}.Contains(((MethodReference)i.Operand).Name)))throw new Exception("Global money interception remains");
+ foreach(var t in new[]{"BehClaimZoneForCityActorBorder","BehGenerateLootFromHouse","BehBuildTarget","BehCityActorCreateRoad","BehCityActorFertilizeCrop","BehGetResourcesFromMine","BehMakeFarm","BehPlantCrops","BehRemoveRuins","BehThrowResources"})if(types.Single(x=>x.Name==t).Methods.Sum(m=>m.HasBody?Calls(m,"EarnNativeIncome"):0)==0)throw new Exception("Unfunded production source "+t);
+ if(Calls(Find("BehFinishTalk","makeGift"),"PrepareGift")!=1||Calls(Find("BehFinishReading","execute"),"AfterReading")!=Find("BehFinishReading","execute").Body.Instructions.Count(i=>i.OpCode==OpCodes.Ret)||Calls(Find("PlotManager","newPlot"),"SpendPolitics")!=1)throw new Exception("Missing specific money/reading event");
+ foreach(var name in new[]{"payTaxToLeader","payTributeToKing"})if(Find("BehActorGiveTax",name).Body.Instructions.Any(i=>i.Operand is MethodReference&&((MethodReference)i.Operand).DeclaringType.Scope.Name=="RebellionRules"))throw new Exception("Native tax distribution was unexpectedly changed");
+ Console.WriteLine("Verified native income, gift, tax, expense and reading routing.");}
 }
