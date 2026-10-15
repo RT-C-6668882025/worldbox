@@ -16,7 +16,9 @@ class Patch {
  static void Main(string[] args){var resolver=new DefaultAssemblyResolver();resolver.AddSearchDirectory(args[2]);var a=AssemblyDefinition.ReadAssembly(args[0],new ReaderParameters{AssemblyResolver=resolver});module=a.MainModule;helper=AssemblyDefinition.ReadAssembly(args[1]).MainModule;
   if(module.AssemblyReferences.Any(x=>x.Name=="RebellionRules"))throw new Exception("Input already patched: use pristine source APK.");
   foreach(var name in new[]{"isUnlocked","isAvailable","isUnlockedByPlayer"}){var gate=M("BaseUnlockableAsset",name);var start=gate.Body.Instructions.First();Prefix(gate,Arg(0),Call("NativeUnlocks","Target"),Instruction.Create(OpCodes.Brfalse,start),Instruction.Create(OpCodes.Ldc_I4_1),Instruction.Create(OpCodes.Ret));}
-  foreach(var pair in new[]{new[]{"GameProgress","create"},new[]{"GameProgress","loadData"},new[]{"ActorTraitLibrary","init"},new[]{"ItemLibrary","post_init"},new[]{"ActorAssetLibrary","post_init"},new[]{"SubspeciesTraitLibrary","post_init"},new[]{"CultureTraitLibrary","init"},new[]{"LanguageTraitLibrary","init"},new[]{"ClanTraitLibrary","init"},new[]{"KingdomTraitLibrary","init"},new[]{"ReligionTraitLibrary","init"}})End(M(pair[0],pair[1]),()=>new[]{Call("NativeUnlocks","Apply")});
+  // initLibs returns only after all post_init AND linkAssets passes have completed.
+  End(M("AssetManager","initLibs"),()=>new[]{Call("NativeUnlocks","AssetsReady")});
+  foreach(var name in new[]{"create","loadData"})End(M("GameProgress",name),()=>new[]{Call("NativeUnlocks","Apply")});
   End(M("ItemLibrary","fillUnlockedPools"),()=>new[]{Arg(0),Call("NativeUnlocks","EquipmentPools")});
   End(M("MapBox","updateFinish"),()=>new[]{Call("NativeOrganizations","Tick")});
   foreach(var type in new[]{"CityWindow","KingdomWindow","FamilyWindow","ClanWindow","AllianceWindow","CultureWindow","ReligionWindow","LanguageWindow","SubspeciesWindow"})End(M(type,"showStatsRows"),()=>new[]{Arg(0),Call("NativeOrganizations","Show")});
