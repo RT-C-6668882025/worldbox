@@ -54,7 +54,7 @@ def main():
   with zipfile.ZipFile(io.BytesIO(check.read('assets/Mono/Managed.zip'))) as nested:
    if hashlib.sha256(nested.read('RebellionRules.dll')).hexdigest()!=sha(out/'RebellionRules.dll'):raise SystemExit('Embedded helper differs from the verified build.')
  os.replace(temporary,signed)
- receipt={'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':19,'native_adapter_standins':31,'hook_stack_graphs':29},'android_runtime_tested':False}
+ receipt={'source_sha256':SOURCE_SHA,'output_sha256':sha(signed),'output':str(signed),'helper_sha256':sha(out/'RebellionRules.dll'),'tests':{'economic':25,'native_adapter_standins':45,'hook_stack_graphs':45,'native_money_routing':True},'android_runtime_tested':False}
  (out/'build-receipt.json').write_text(json.dumps(receipt,indent=2));print(json.dumps(receipt,indent=2))
 if __name__=='__main__':main()
 
