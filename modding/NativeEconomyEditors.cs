@@ -24,52 +24,42 @@ public static class NativeEconomyEditors {
  }
 }
 public sealed class GodCurrencyEditorPanel:MonoBehaviour {
- static readonly double[] amounts={100,1000,10000,100000,1000000};
- readonly List<KeyValueField> rows=new List<KeyValueField>();StatsWindow window;double amount=1000;int scope;float nextRefresh;string status="点击右侧数值操作";InputField amountInput,rateInput;
- public void Bind(StatsWindow w){if(window!=w){scope=0;window=w;}if(rows.Count>0)Refresh();}
+ readonly List<KeyValueField> rows=new List<KeyValueField>();
+ readonly Dictionary<string,InputField> inputs=new Dictionary<string,InputField>();
+ StatsWindow window;object selected;int scope;float nextRefresh;string status="每项独立输入，点击按钮执行";
+ public void Bind(StatsWindow w){window=w;if(rows.Count>0)Refresh();}
  void OnEnable(){try{if(rows.Count==0)Create();Refresh();}catch(Exception e){Debug.LogWarning("GodWorld editor UI: "+e);}}
  void Update(){if(Time.unscaledTime<nextRefresh)return;nextRefresh=Time.unscaledTime+1;try{Refresh();}catch(Exception e){Debug.LogWarning("GodWorld editor refresh: "+e);}}
- InputField Input(KeyValueField row,string value,bool integral){
-  var field=row.value.gameObject.AddComponent<InputField>();field.textComponent=row.value;field.text=value;field.contentType=integral?InputField.ContentType.IntegerNumber:InputField.ContentType.DecimalNumber;
-  field.lineType=InputField.LineType.SingleLine;field.characterLimit=24;row.value.raycastTarget=true;return field;
+ KeyValueField Add(string label,string value,Action action=null){var prefab=Resources.Load<GameObject>("ui/KeyValueFieldStats");if(prefab==null)throw new Exception("Native currency row prefab missing");var obj=UnityEngine.Object.Instantiate(prefab,transform,false);obj.name="godworld_currency_"+rows.Count;var row=obj.GetComponent<KeyValueField>();var size=obj.GetComponent<LayoutElement>()??obj.AddComponent<LayoutElement>();size.minHeight=36;size.preferredHeight=36;if(row.icon!=null)row.icon.gameObject.SetActive(false);
+  foreach(var text in new[]{row.name_text,row.value}){text.supportRichText=false;text.resizeTextForBestFit=true;text.resizeTextMinSize=9;text.resizeTextMaxSize=14;text.horizontalOverflow=HorizontalWrapMode.Wrap;text.verticalOverflow=VerticalWrapMode.Truncate;}
+  row.name_text.text=label;row.value.text=value;NativeEconomyUI.BindAction(row,action==null?null:(UnityEngine.Events.UnityAction)(()=>Run(action)));rows.Add(row);obj.SetActive(true);return row;
  }
- void Create(){var prefab=Resources.Load<GameObject>("ui/KeyValueFieldStats");if(prefab==null)throw new Exception("Native currency row prefab missing");
-  for(int i=0;i<20;i++){var obj=UnityEngine.Object.Instantiate(prefab,transform,false);obj.name="godworld_currency_"+i;var row=obj.GetComponent<KeyValueField>();var size=obj.GetComponent<LayoutElement>()??obj.AddComponent<LayoutElement>();size.minHeight=26;size.preferredHeight=26;if(row.icon!=null)row.icon.gameObject.SetActive(false);rows.Add(row);obj.SetActive(true);}
-  amountInput=Input(rows[3],"1000",true);amountInput.onEndEdit.AddListener(text=>{double n;if(Double.TryParse(text,out n)&&n>0&&n<=Int32.MaxValue&&n==Math.Floor(n)){amount=n;status="操作数量已修改";}else status="请输入1到2147483647的整数";Refresh();});
-  rateInput=Input(rows[10],F(GodWorldRuntime.GetRate()),false);rateInput.onEndEdit.AddListener(text=>{double n;if(Double.TryParse(text,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out n)&&n>0&&!Double.IsInfinity(n)){GodWorldRuntime.SetRate(n);status="汇率已修改";}else status="汇率必须大于0";Refresh();});
+ void Amount(string key,string label,Action<double> action){var row=Add(label+"数量","1000");var go=row.value.gameObject;var field=go.AddComponent<InputField>();field.textComponent=row.value;field.text="1000";field.contentType=InputField.ContentType.IntegerNumber;field.lineType=InputField.LineType.SingleLine;field.characterLimit=10;row.value.raycastTarget=true;inputs.Add(key,field);Add(label,"执行 ▸",()=>{double n;if(!CurrencyInput.TryAmount(field.text,out n))throw new Exception("请输入1至2147483647的整数");action(n);});}
+ void Create(){Add("双币","");Add("金币余额","");Add("GOD 余额","");Add("当前汇率","");Add("操作状态",status);
+  Amount("mintGold","发行金币",n=>Apply(CurrencyScope.Operation.MintGold,n));Amount("burnGold","回收金币",n=>Apply(CurrencyScope.Operation.BurnGold,n));Amount("mintGod","发行 GOD",n=>Apply(CurrencyScope.Operation.MintGod,n));Amount("burnGod","回收 GOD",n=>Apply(CurrencyScope.Operation.BurnGod,n));
+  Amount("goldToGod","金币换 GOD",n=>Apply(CurrencyScope.Operation.GoldToGod,n));Amount("godToGold","GOD 换金币",n=>Apply(CurrencyScope.Operation.GodToGold,n));
+  Add("作用范围","",()=>{if(window is KingdomWindow){scope=1-scope;status="已切换作用范围";}else status="作用于当前选中对象";});
+  Amount("grant","下拨金币",n=>Transfer(true,n));Amount("return","上缴金币",n=>Transfer(false,n));Amount("stimulate","经济投入",n=>{var c=City();var k=Nation();status=NativeLifecycle.Stimulate(c??(k==null?null:k.capital),n)?"已投入现有金币":"金币或资源不足";});
+  Add("汇率设置","世界法则中修改");Add("存档","立即保存 ▸",()=>{GodWorldRuntime.Flush();NativeLifecycle.SaveGame();status="已请求原生存档";});
  }
+ void Run(Action action){try{if(!System.Object.ReferenceEquals(selected,Selection()))throw new Exception("对象已切换，请重新输入数量");action();}catch(Exception e){status=e.Message;Debug.LogWarning("GodWorld currency action: "+e);}Refresh();}
  Actor Person(){var u=window as UnitWindow;if(u==null)return null;return (Actor)typeof(UnitWindow).GetMethod("get_actor",BindingFlags.Instance|BindingFlags.NonPublic).Invoke(u,null);}
- Kingdom Nation(){var kw=window as KingdomWindow;if(kw!=null)return kw.getMetaObject();var c=City();return GodWorldRuntime.Nation(c);}
- City City(){var cw=window as CityWindow;if(cw!=null)return cw.getMetaObject();var a=Person();return a==null?null:a.getCity();}
+ Kingdom Nation(){var w=window as KingdomWindow;return w!=null?w.getMetaObject():GodWorldRuntime.Nation(City());}
+ City City(){var w=window as CityWindow;if(w!=null)return w.getMetaObject();var a=Person();return a==null?null:a.getCity();}
+ object Selection(){if(window is UnitWindow)return Person();if(window is KingdomWindow)return Nation();return City();}
  List<City> Cities(){return window is KingdomWindow?CurrencyScope.Cities(null,Nation()):CurrencyScope.Cities(City(),null);}
- static string F(double n){return n.ToString("0.##",System.Globalization.CultureInfo.InvariantCulture);}
- void Row(int i,string label,string value,Action action){var r=rows[i];r.name_text.text=label;if(i!=3&&i!=10)r.value.text=value;NativeEconomyUI.BindAction(r,action==null?null:(UnityEngine.Events.UnityAction)(()=>{try{action();Refresh();}catch(Exception e){status="操作失败";Debug.LogWarning("GodWorld editor action: "+e);Refresh();}}));}
- void Apply(CurrencyScope.Operation op){bool ok;var a=Person();
-  if(a!=null){switch(op){case CurrencyScope.Operation.MintGold:ok=NativeLifecycle.IssuePersonal(a,false,amount);break;case CurrencyScope.Operation.BurnGold:ok=NativeLifecycle.IssuePersonal(a,false,-amount);break;case CurrencyScope.Operation.MintGod:ok=NativeLifecycle.IssuePersonal(a,true,amount);break;case CurrencyScope.Operation.BurnGod:ok=NativeLifecycle.IssuePersonal(a,true,-amount);break;default:ok=NativeLifecycle.ExchangePersonal(a,op==CurrencyScope.Operation.GoldToGod,amount);break;}}
+ static string F(double n){return n.ToString("G12",System.Globalization.CultureInfo.InvariantCulture);}
+ void Apply(CurrencyScope.Operation op,double amount){bool ok;var a=Person();if(a!=null){switch(op){case CurrencyScope.Operation.MintGold:ok=NativeLifecycle.IssuePersonal(a,false,amount);break;case CurrencyScope.Operation.BurnGold:ok=NativeLifecycle.IssuePersonal(a,false,-amount);break;case CurrencyScope.Operation.MintGod:ok=NativeLifecycle.IssuePersonal(a,true,amount);break;case CurrencyScope.Operation.BurnGod:ok=NativeLifecycle.IssuePersonal(a,true,-amount);break;default:ok=NativeLifecycle.ExchangePersonal(a,op==CurrencyScope.Operation.GoldToGod,amount);break;}}
   else if(window is KingdomWindow&&scope==0)ok=NativeLifecycle.NationalOperation(Nation(),op,amount);else ok=CurrencyScope.Apply(Cities(),op,amount);
-  status=ok?"已完成":"余额不足、持币容量不足或超出上限";
+  status=ok?"已完成":"余额或容量不足，未执行";
  }
- void PersonalTransfer(bool fromCity){var a=Person();var c=City();if(a==null||c==null){status="没有所属城市";return;}var d=(ActorData)a.getData();int n=(int)amount;bool ok;
-  if(fromCity){ok=n<=Int32.MaxValue-d.money&&GodWorldRuntime.TryDebitPublic(c,n);if(ok)d.money+=n;}
-  else{ok=d.money>=n&&GodWorldRuntime.CreditPublic(c,n);if(ok)d.money-=n;}status=ok?"转账完成，总量不变":"转账失败";
- }
- void Refresh(){if(rows.Count==0||window==null)return;var a=Person();var k=Nation();var c=City();var cities=Cities();bool national=window is KingdomWindow&&scope==0;
-  double gold=a!=null?((ActorData)a.getData()).money:national?NativeLifecycle.NationalBalance(k,false):CurrencyScope.Total(cities,false);
-  double god=a!=null?NativeLifecycle.PersonalGod(a):national?NativeLifecycle.NationalBalance(k,true):CurrencyScope.Total(cities,true);
-  Row(0,a!=null?"双币 · 个人":national?"双币 · 独立国库":window is KingdomWindow?"双币 · 全国城市":"双币 · 本村镇",status,null);
-  Row(1,"金币",F(gold),null);Row(2,"GOD",F(god),null);Row(3,"输入操作数量","",null);
-  Row(4,"发行金币","+ "+F(amount),()=>Apply(CurrencyScope.Operation.MintGold));Row(5,"回收金币","− "+F(amount),()=>Apply(CurrencyScope.Operation.BurnGold));
-  Row(6,"发行 GOD","+ "+F(amount),()=>Apply(CurrencyScope.Operation.MintGod));Row(7,"回收 GOD","− "+F(amount),()=>Apply(CurrencyScope.Operation.BurnGod));
-  Row(8,"金币 → GOD",F(amount)+" 金币",()=>Apply(CurrencyScope.Operation.GoldToGod));Row(9,"GOD → 金币",F(amount)+" GOD",()=>Apply(CurrencyScope.Operation.GodToGold));
-  Row(10,"输入汇率：1 GOD =","",null);if(!rateInput.isFocused)rateInput.text=F(GodWorldRuntime.GetRate());if(!amountInput.isFocused)amountInput.text=F(amount);
-  Row(11,"提高汇率","× 1.25",()=>GodWorldRuntime.SetRate(GodWorldRuntime.GetRate()*1.25));Row(12,"降低汇率","÷ 1.25",()=>GodWorldRuntime.SetRate(GodWorldRuntime.GetRate()/1.25));
-  Row(13,"作用范围",a!=null?"当前人物 · 汇率全世界共用":window is KingdomWindow?(scope==0?"独立国库 ▸":"全国城市 ▸"):"当前村镇",window is KingdomWindow?(Action)(()=>scope=1-scope):null);
-  Row(14,a!=null?"城市 → 个人":"国库 → 当前城市",F(amount)+" 金币",()=>{if(a!=null)PersonalTransfer(true);else status=NativeLifecycle.NationalGrant(k,c??(k==null?null:k.capital),amount,true)?"拨款完成":"拨款失败";});
-  Row(15,a!=null?"个人 → 城市":"当前城市 → 国库",F(amount)+" 金币",()=>{if(a!=null)PersonalTransfer(false);else status=NativeLifecycle.NationalGrant(k,c??(k==null?null:k.capital),amount,false)?"上缴完成":"上缴失败";});
-  Row(16,"快速数量","切换档位 ▸",()=>{int index=Array.IndexOf(amounts,amount);amount=amounts[(index+1)%amounts.Length];});
-  Row(17,"经济加速","投入现有资金 ▸",()=>{var target=c??(k==null?null:k.capital);status=NativeLifecycle.Stimulate(target,amount)?"已投入，仍需资源和生产":"资金或资源不足";});
-  Row(18,a!=null?"个人 GOD 容量":"操作说明",a!=null?F(NativeLifecycle.GodCapacity(a)):"发行增加总量；拨款仅转移",null);
-  Row(19,"存档","立即保存 ▸",()=>{GodWorldRuntime.Flush();NativeLifecycle.SaveGame();status="已请求原生存档";});
+ void Transfer(bool down,double amount){var a=Person();var c=City();var k=Nation();if(a==null){status=NativeLifecycle.NationalGrant(k,c??(k==null?null:k.capital),amount,down)?"转账完成，总量不变":"转账失败";return;}if(c==null){status="没有所属城市";return;}var d=(ActorData)a.getData();int n=(int)amount;bool ok;if(down){ok=n<=Int32.MaxValue-d.money&&GodWorldRuntime.TryDebitPublic(c,n);if(ok)d.money+=n;}else{ok=d.money>=n&&GodWorldRuntime.CreditPublic(c,n);if(ok)d.money-=n;}status=ok?"转账完成，总量不变":"转账失败";}
+ void Refresh(){if(rows.Count==0||window==null)return;var target=Selection();if(!System.Object.ReferenceEquals(selected,target)){selected=target;scope=0;foreach(var field in inputs.Values)field.SetTextWithoutNotify("1000");status="已切换对象，各项数量已重置";}
+  var a=Person();var k=Nation();var cities=Cities();bool national=window is KingdomWindow&&scope==0;
+  double gold=a!=null?((ActorData)a.getData()).money:national?NativeLifecycle.NationalBalance(k,false):CurrencyScope.Total(cities,false),god=a!=null?NativeLifecycle.PersonalGod(a):national?NativeLifecycle.NationalBalance(k,true):CurrencyScope.Total(cities,true);
+  rows[0].value.text=a!=null?"当前人物":national?"独立国库":window is KingdomWindow?"全国城市合计":"当前城市";rows[1].value.text=F(gold);rows[2].value.text=F(god);rows[3].value.text="1 GOD = "+F(GodWorldRuntime.GetRate())+" 金币";rows[4].value.text=status;
+  rows[17].value.text=window is KingdomWindow?(scope==0?"独立国库 ▸":"全国城市 ▸"):a!=null?"当前人物":"当前城市";
+  rows[18].name_text.text=a!=null?"城市 → 个人数量":"国库 → 城市数量";rows[19].name_text.text=a!=null?"城市 → 个人":"国库 → 城市";rows[20].name_text.text=a!=null?"个人 → 城市数量":"城市 → 国库数量";rows[21].name_text.text=a!=null?"个人 → 城市":"城市 → 国库";
   LayoutRebuilder.MarkLayoutForRebuild((RectTransform)transform);
  }
 }

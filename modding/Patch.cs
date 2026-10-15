@@ -16,6 +16,7 @@ class Patch {
  static void Main(string[] args){var resolver=new DefaultAssemblyResolver();resolver.AddSearchDirectory(args[2]);var a=AssemblyDefinition.ReadAssembly(args[0],new ReaderParameters{AssemblyResolver=resolver});module=a.MainModule;helper=AssemblyDefinition.ReadAssembly(args[1]).MainModule;
   if(module.AssemblyReferences.Any(x=>x.Name=="RebellionRules"))throw new Exception("Input already patched: use pristine source APK.");
   Prefix(M("LoadingScreen","Awake"),Arg(0),Call("BootDiagnostics","Begin"));
+  End(M("WorldLawsWindow","OnEnable"),()=>new[]{Arg(0),Call("NativeWorldRate","Attach")});
   End(M("LoadingScreen","Update"),()=>new[]{Arg(0),Call("BootDiagnostics","Paint")});
   foreach(var instruction in M("SmoothLoader","doActions").Body.Instructions.Where(i=>i.Operand is MethodReference&&((MethodReference)i.Operand).DeclaringType.Name=="MapLoaderAction"&&((MethodReference)i.Operand).Name=="Invoke").ToArray()){instruction.OpCode=OpCodes.Call;instruction.Operand=H("BootDiagnostics","Run");changed.Add(M("SmoothLoader","doActions"));}
   foreach(var name in new[]{"isUnlocked","isAvailable","isUnlockedByPlayer"}){var gate=M("BaseUnlockableAsset",name);var start=gate.Body.Instructions.First();Prefix(gate,Arg(0),Call("NativeUnlocks","Target"),Instruction.Create(OpCodes.Brfalse,start),Instruction.Create(OpCodes.Ldc_I4_1),Instruction.Create(OpCodes.Ret));}
