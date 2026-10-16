@@ -21,11 +21,15 @@ jobs:
           python3 modding/fetch_tools.py tools
       - name: Compile, verify actual game types, package and sign
         run: python3 modding/build.py --apk source.apk --tools tools --output build
+      - name: Android SDK package parsing
+        run: |
+          AAPT2=$(python3 -c 'import glob,os; p=glob.glob(os.environ["ANDROID_HOME"]+"/build-tools/*/aapt2"); assert p; print(sorted(p)[-1])')
+          python3 modding/check_install.py source.apk build/worldbox-native-unlocks-install-fix.apk --aapt2 "$AAPT2"
       - uses: actions/upload-artifact@v4
         with:
           name: native-unlocks-test
           path: |
-            build/worldbox-native-unlocks-test.apk
+            build/worldbox-native-unlocks-install-fix.apk
             build/build-receipt.json
             build/patch-log.txt
       - name: Publish tested build as prerelease
@@ -33,4 +37,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="native-unlocks-test-${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}"
-          gh release create "$TAG" build/worldbox-native-unlocks-test.apk build/build-receipt.json build/patch-log.txt --target "$GITHUB_SHA" --prerelease --title "原生解锁＋军队人数限制解除 · 测试版 ${GITHUB_SHA::7}" --notes-file modding/RELEASE.md
+          gh release create "$TAG" build/worldbox-native-unlocks-install-fix.apk build/build-receipt.json build/patch-log.txt --target "$GITHUB_SHA" --prerelease --title "安装兼容修复＋原生解锁＋军队 · 测试版 ${GITHUB_SHA::7}" --notes-file modding/RELEASE.md
