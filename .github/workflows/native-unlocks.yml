@@ -33,4 +33,4 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           TAG="native-unlocks-test-${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}"
-          gh release create "$TAG" build/worldbox-native-unlocks-test.apk build/build-receipt.json build/patch-log.txt --target "$GITHUB_SHA" --prerelease --title "原生内容解锁 · 测试版 ${GITHUB_SHA::7}" --notes-file modding/RELEASE.md
+          gh release create "$TAG" build/worldbox-native-unlocks-test.apk build/build-receipt.json build/patch-log.txt --target "$GITHUB_SHA" --prerelease --title "原生解锁＋军队人数限制解除 · 测试版 ${GITHUB_SHA::7}" --notes-file modding/RELEASE.md

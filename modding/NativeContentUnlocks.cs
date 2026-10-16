@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 // No UI, Update hooks, economy code or saved-game rewriting.
 public static class NativeContentUnlocks {
+ public static int ArmyCapacity(City city) {
+  return city==null || city.status==null ? 0 : Math.Max(0,city.status.population_adults);
+ }
  public static bool Target(BaseUnlockableAsset a) {
   return a!=null && (a is ActorAsset || a is BaseAugmentationAsset && !(a is WorldLawAsset));
  }

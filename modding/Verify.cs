@@ -19,13 +19,13 @@ class Verify {
  static void Main(string[] a){
  var r=new DefaultAssemblyResolver();r.AddSearchDirectory(a[3]);r.AddSearchDirectory(System.IO.Path.GetDirectoryName(a[2]));var rp=new ReaderParameters{AssemblyResolver=r};
  var before=ModuleDefinition.ReadModule(a[0],rp);var after=ModuleDefinition.ReadModule(a[1],rp);var h=ModuleDefinition.ReadModule(a[2],rp);
- var expected=new HashSet<string>{"BaseUnlockableAsset::isUnlocked","BaseUnlockableAsset::isAvailable","BaseUnlockableAsset::isUnlockedByPlayer","AssetManager::initLibs","ItemLibrary::fillUnlockedPools","AugmentationsEditor`7::editorButtonClick","GeneEditor::clickGeneAssetAction","LocusElement::OnDrop"};
+ var expected=new HashSet<string>{"BaseUnlockableAsset::isUnlocked","BaseUnlockableAsset::isAvailable","BaseUnlockableAsset::isUnlockedByPlayer","AssetManager::initLibs","ItemLibrary::fillUnlockedPools","AugmentationsEditor`7::editorButtonClick","GeneEditor::clickGeneAssetAction","LocusElement::OnDrop","City::getMaxWarriors","CityBehCheckCitizenTasks::getPossibleWarriors","City::isArmyFull","City::isArmyOverLimit"};
  int changed=0,refs=0;
  foreach(var t in Types(after))foreach(var f in t.Methods){var original=Types(before).Single(x=>x.FullName==t.FullName).Methods.Single(x=>x.FullName==f.FullName);if(Shape(original)!=Shape(f)){var id=t.Name+"::"+f.Name;if(!expected.Remove(id))throw new Exception("Unexpected changed method: "+id);Check(f);changed++;Console.WriteLine("Verified stack graph: "+id);}
  if(!f.HasBody)continue;foreach(var i in f.Body.Instructions){if(i.Operand is Instruction target && !f.Body.Instructions.Contains(target))throw new Exception("Invalid branch");var mr=i.Operand as MethodReference;if(mr==null||mr.DeclaringType.Scope.Name!="NativeContentUnlocks")continue;var definition=h.Types.Single(x=>x.FullName==mr.DeclaringType.FullName).Methods.Single(x=>x.FullName==mr.FullName);refs++;}}
- if(expected.Count!=0||changed!=8||refs!=5)throw new Exception("Coverage mismatch "+changed+"/"+refs+" missing "+String.Join(",",expected));
+ if(expected.Count!=0||changed!=12||refs!=7)throw new Exception("Coverage mismatch "+changed+"/"+refs+" missing "+String.Join(",",expected));
  foreach(var t in h.Types)foreach(var f in t.Methods)if(f.HasBody){Check(f);foreach(var i in f.Body.Instructions){var mr=i.Operand as MethodReference;if(mr!=null&&mr.DeclaringType.Scope.Name=="Assembly-CSharp"&&mr.Resolve()==null)throw new Exception("Unresolved game method: "+mr);var fr=i.Operand as FieldReference;if(fr!=null&&fr.DeclaringType.Scope.Name=="Assembly-CSharp"&&fr.Resolve()==null)throw new Exception("Unresolved game field: "+fr);}}
  if(after.AssemblyReferences.Any(x=>x.Name=="RebellionRules"))throw new Exception("Old mod dependency present");
- Console.WriteLine("PASS: exactly 8 intended game methods, 5 helper calls, helper stack graphs and native references.");
+ Console.WriteLine("PASS: exactly 12 intended game methods, 7 helper calls, helper stack graphs and native references.");
  }
 }

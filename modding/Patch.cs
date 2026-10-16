@@ -24,6 +24,15 @@ class Patch {
   foreach(var i in f.Body.Instructions)if(i.Operand is MethodReference mr&&mr.DeclaringType.Name=="Config"&&mr.Name=="get_hasPremium"){i.OpCode=OpCodes.Ldc_I4_1;i.Operand=null;count++;}
   if(count!=1)throw new Exception("Unexpected premium gate count "+f.FullName+":"+count);log.Add("editor "+f.FullName);
  }
+ // Remove population-ratio/leader caps without infinite sentinel values.
+ foreach(var pair in new[]{new[]{"City","getMaxWarriors"},new[]{"CityBehCheckCitizenTasks","getPossibleWarriors"}}){
+  var f=M(pair[0],pair[1]);f.Body=new MethodBody(f);var il=f.Body.GetILProcessor();
+  il.Append(Instruction.Create(pair[0]=="City"?OpCodes.Ldarg_0:OpCodes.Ldarg_1));
+  il.Append(Instruction.Create(OpCodes.Call,H("ArmyCapacity")));il.Append(Instruction.Create(OpCodes.Ret));log.Add("army capacity "+f.FullName);
+ }
+ foreach(var name in new[]{"isArmyFull","isArmyOverLimit"}){
+  var f=M("City",name);f.Body=new MethodBody(f);f.Body.Instructions.Add(Instruction.Create(OpCodes.Ldc_I4_0));f.Body.Instructions.Add(Instruction.Create(OpCodes.Ret));log.Add("army gate "+f.FullName);
+ }
  m.Write(a[3]);System.IO.File.WriteAllLines(a[4],log);Console.WriteLine(String.Join("\n",log));
  }
 }
