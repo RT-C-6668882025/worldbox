@@ -1,0 +1,36 @@
+name: Build native unlock test APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [unlock-native-content-20261016]
+    paths: ['modding/**', '.github/workflows/native-unlocks.yml']
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Fetch exact source and pinned tools
+        run: |
+          curl -fL --retry 3 https://github.com/RT-C-6668882025/worldbox/releases/download/apk-upload-20261014/worldbox.apk -o source.apk
+          python3 modding/fetch_tools.py tools
+      - name: Compile, verify actual game types, package and sign
+        run: python3 modding/build.py --apk source.apk --tools tools --output build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: native-unlocks-test
+          path: |
+            build/worldbox-native-unlocks-test.apk
+            build/build-receipt.json
+            build/patch-log.txt
+      - name: Publish tested build as prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="native-unlocks-test-${GITHUB_RUN_NUMBER}-${GITHUB_SHA::7}"
+          gh release create "$TAG" build/worldbox-native-unlocks-test.apk build/build-receipt.json build/patch-log.txt --target "$GITHUB_SHA" --prerelease --title "原生内容解锁 · 测试版 ${GITHUB_SHA::7}" --notes-file modding/RELEASE.md
