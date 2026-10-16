@@ -1,0 +1,41 @@
+name: Startup diagnostics checks
+on:
+  push:
+    paths:
+      - 'modding/**'
+      - '.github/workflows/startup-diagnostics.yml'
+  pull_request:
+    paths:
+      - 'modding/**'
+      - '.github/workflows/startup-diagnostics.yml'
+  workflow_dispatch:
+jobs:
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check Python scripts parse
+        run: python3 -m compileall -q modding
+      - name: Check Android startup diagnostic shell syntax
+        run: bash -n modding/diagnose_startup.sh
+      - name: Check required build gates are present
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          build=Path('modding/build.py').read_text()
+          verify=Path('modding/VerifyIL.cs').read_text()
+          required={
+            'IL validation': "compile('VerifyIL'" in build and "run(dotnet,out/'VerifyIL.dll'" in build,
+            'runtime tests': "compile('RuntimeTests'" in build and "run(dotnet,out/'RuntimeTests.dll')" in build,
+            'APK signature check': "'verify',temporary" in build,
+            'injected signature validation': 'Missing injected helper method/signature' in verify,
+          }
+          for name,ok in required.items():
+            print(('PASS' if ok else 'FAIL')+': '+name)
+          if not all(required.values()):
+            raise SystemExit('Required build gate missing')
+          PY
+      - name: Declare test limits
+        run: |
+          echo "Static checks only. No original APK or Android device is available in this workflow."
+          echo "Do not interpret this job as Android startup or runtime verification."
