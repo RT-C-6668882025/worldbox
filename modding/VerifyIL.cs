@@ -14,5 +14,23 @@ class VerifyIL {
  }
  static void Main(string[] args){var resolver=new DefaultAssemblyResolver();resolver.AddSearchDirectory(args[1]);var a=AssemblyDefinition.ReadAssembly(args[0],new ReaderParameters{AssemblyResolver=resolver});int checkedMethods=0;
  foreach(var t in a.MainModule.Types)foreach(var m in t.Methods){if(!m.HasBody)continue;if(!m.Body.Instructions.Any(i=>i.Operand is MethodReference && ((MethodReference)i.Operand).DeclaringType.Scope.Name=="RebellionRules"))continue;Check(m);checkedMethods++;}
- if(checkedMethods<20)throw new Exception("Too few injected method bodies");Console.WriteLine("Verified "+checkedMethods+" hooked method stack graphs.");}
+ if(checkedMethods<20)throw new Exception("Too few injected method bodies");
+ var helperPath=System.IO.Path.Combine(System.IO.Path.GetDirectoryName(args[0]),"RebellionRules.dll");
+ if(!System.IO.File.Exists(helperPath))throw new Exception("Missing injected helper: "+helperPath);
+ var helper=AssemblyDefinition.ReadAssembly(helperPath,new ReaderParameters{AssemblyResolver=resolver});
+ int resolved=0;
+ foreach(var t in a.MainModule.Types)foreach(var m in t.Methods){
+  if(!m.HasBody)continue;
+  foreach(var i in m.Body.Instructions){
+   var mr=i.Operand as MethodReference;
+   if(mr==null||mr.DeclaringType.Scope.Name!="RebellionRules")continue;
+   var type=helper.MainModule.Types.FirstOrDefault(x=>x.FullName==mr.DeclaringType.FullName);
+   if(type==null)throw new Exception("Missing injected helper type: "+mr.DeclaringType.FullName);
+   if(!type.Methods.Any(x=>x.Name==mr.Name&&x.Parameters.Count==mr.Parameters.Count&&x.ReturnType.FullName==mr.ReturnType.FullName&&x.Parameters.Select(p=>p.ParameterType.FullName).SequenceEqual(mr.Parameters.Select(p=>p.ParameterType.FullName))))
+    throw new Exception("Missing injected helper method/signature: "+mr.FullName);
+   resolved++;
+  }
+ }
+ if(resolved<20)throw new Exception("Too few resolved helper calls: "+resolved);
+ Console.WriteLine("Verified "+checkedMethods+" hooked method stack graphs and "+resolved+" helper call signatures.");}
 }
