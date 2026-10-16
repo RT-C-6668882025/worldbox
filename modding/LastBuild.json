@@ -1,0 +1,42 @@
+{
+  "core_native_import_repair": {
+    "preserved_method_bodies": 53089,
+    "preserved_native_entrypoint_signatures": 535,
+    "embedded_assemblies": {
+      "System.dll": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "mscorlib.dll": "8b1035b5d13be88cfc19ddcdc42e6a4c12309a82e0dd4891399f4439346fd2c7",
+      "System.Core.dll": "e1ec097d1a05cb3f6c2f4eef26a5ddfc724843654a058be1a100b20915a1e3b3",
+      "System.IO.Compression.dll": "76e87ee45f23ce1fbcd57530920553ab8ddae3664547904ee93daf26c9e18f3d"
+    }
+  },
+  "android_native_helpers": {
+    "libmono-native.so": "5f7247ea5e01a3646bc4eafc6f02cf7e78259be9af336478ab7cfd252d16d288",
+    "libMonoPosixHelper.so": "318fd5f91ed99b481f29f53943d4491bd871642813bd64d5c4e1589c6e6a807b",
+    "libmono-btls-shared.so": "688dea64455a2155b65491070b873bb3a9790cb900a737fdfe9a5a5cc52d8dcf",
+    "libmono-ee-interp.so": "5725317f15d8b2b7052d3c88094bd9099efc8bedf318f1062fae5d00bc8fd166",
+    "libMonoSupportW.so": "99cd41f2db136133d3b7748e56994c1c803f353ea89c209349f2b36d02a5a701"
+  },
+  "typed_il_validation": {
+    "no_new_typed_il_errors": true,
+    "original_unsafe_il_baseline": 24
+  },
+  "runtime_cache_id": "h3sf",
+  "unity_extension_assembly_registered": true,
+  "source_sha256": "c39817efa21e539fe61f318dc1ad4050b424c6120ab8ed384d94148f869c4bdc",
+  "output_sha256": "ad00d6d5209992811344a131b0368f3ecdb5d281377f15b7f20ac210a8d6b0af",
+  "output": "/workspace/scratch/2bfe259058cc/worldbox-049-lifecycle/worldbox-economy-native-alpha.apk",
+  "helper_sha256": "d81045f459b3636863de8fab156af5b628b2122ae7aad74dc47017f0d4850dbb",
+  "tests": {
+    "economic": 41,
+    "native_adapter_standins": 114,
+    "integration_policy": 39,
+    "hook_stack_graphs": 95,
+    "unlock": 27,
+    "currency_panel": 22,
+    "boot_diagnostics": 8,
+    "headless_render": 33,
+    "native_money_routing": true,
+    "native_systems_routing": true
+  },
+  "android_runtime_tested": false
+}

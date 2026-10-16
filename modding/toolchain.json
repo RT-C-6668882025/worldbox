@@ -1,0 +1,22 @@
+{
+  "dotnet.tar.gz": {
+    "url": "https://dotnetcli.blob.core.windows.net/dotnet/Sdk/8.0.100/dotnet-sdk-8.0.100-linux-x64.tar.gz",
+    "sha256": "550692ae3233e69692822b8be31bb01c5a2b60c3cfa59e9bfce8278b99f36211"
+  },
+  "cecil.nupkg": {
+    "url": "https://api.nuget.org/v3-flatcontainer/mono.cecil/0.11.5/mono.cecil.0.11.5.nupkg",
+    "sha256": "9cf1706f35b4f209c28da7417608bed7a307621b0f0179c52258af78bc4668d0"
+  },
+  "ecj.jar": {
+    "url": "https://repo.maven.apache.org/maven2/org/eclipse/jdt/ecj/3.37.0/ecj-3.37.0.jar",
+    "sha256": "cde026ff966b48b5e5f148b6f041ceff3cf4f85cf75155f4ec0f40e4ee14b545"
+  },
+  "apksig.jar": {
+    "url": "https://dl.google.com/dl/android/maven2/com/android/tools/build/apksig/8.2.2/apksig-8.2.2.jar",
+    "sha256": "468ee1852fa12461c6629608fe47be70e50f60be7c4744bb7f62ca48e85c0a6c"
+  },
+  "ilverify.nupkg": {
+    "url": "https://api.nuget.org/v3-flatcontainer/dotnet-ilverify/8.0.0/dotnet-ilverify.8.0.0.nupkg",
+    "sha256": "a4ee8e509ad175776191b687294b7b0e047e645e7dfba0d8911faa1c66ab3a42"
+  }
+}

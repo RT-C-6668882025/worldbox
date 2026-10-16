@@ -1,3 +1,13 @@
 # Worldbox
 
-[Download worldbox.apk](https://github.com/RT-C-6668882025/worldbox/releases/download/apk-upload-20261014/worldbox.apk)
+保留原生界面与操作的双币经济扩展：个人、城市和国家财政，生产就业、工业链、财政危机、叛乱动员及后期装备。全装备与个人特质开放，发展支出只用金币，GOD 仅手动兑换。
+
+- [当前开发版与核查记录](https://github.com/RT-C-6668882025/worldbox/pull/1)
+- [功能与验证状态](modding/STATUS.md)
+- [逐项需求对应](modding/RequirementsCoverage.md)
+- [已发布安装兼容版 v0.3.1-alpha](https://github.com/RT-C-6668882025/worldbox/releases/tag/v0.3.1-alpha)：旧发布包，不包含上述最新开发改动。
+- [原始安装包](https://github.com/RT-C-6668882025/worldbox/releases/download/apk-upload-20261014/worldbox.apk)
+
+动物、生物、怪物图鉴及个人/亚种词条已统一解锁，保留原生互斥和适用性规则。
+
+九类原生组织支持综合实力排名与可编辑加成，组织统计页点击“编辑组织”。个人能力统一使用原生属性和特质，取消额外技能经验体系。详见 [实现状态](modding/STATUS.md)。

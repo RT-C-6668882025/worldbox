@@ -1,0 +1,120 @@
+using System;
+using System.Collections.Generic;
+using System.Reflection;
+using Newtonsoft.Json;
+using UnityEngine;
+public static class GodWorldRuntime {
+ const string StateKey="godworld.economy.v2", ReserveKey="godworld.gold.reserve", RateKey="godworld.goldPerGod";
+ class Entry {public City city;public GodEconomyState state;public int year;public double fraction;public bool dirty;}
+ static readonly Dictionary<long,Entry> entries=new Dictionary<long,Entry>();
+ static readonly FieldInfo mapField=typeof(MapBox).GetField("map_stats",BindingFlags.Instance|BindingFlags.NonPublic);
+ static readonly FieldInfo kingdomField=typeof(City).GetField("kingdom",BindingFlags.Instance|BindingFlags.NonPublic);
+ static readonly FieldInfo buildTimer=typeof(City).GetField("timer_build",BindingFlags.Instance|BindingFlags.NonPublic);
+ static readonly FieldInfo warriorTimer=typeof(City).GetField("_timer_warrior",BindingFlags.Instance|BindingFlags.NonPublic);
+ static readonly FieldInfo statsField=typeof(BaseSimObject).GetField("stats",BindingFlags.Instance|BindingFlags.NonPublic|BindingFlags.Public);
+ static BaseStats Stats(Actor actor){return (BaseStats)statsField.GetValue(actor);}
+ static bool IsAtWar(Kingdom k){foreach(var w in k.getWars(false))if(!w.hasEnded())return true;return false;}
+ static MapStats currentMap;static bool busy;static double rate=1;
+ static MapStats Map(){var world=World.world;if(world==null)return null;var map=(MapStats)mapField.GetValue(world);if(!System.Object.ReferenceEquals(map,currentMap)){entries.Clear();currentMap=map;rate=1;GodEconomy.SetRate(1);if(map!=null&&map.custom_data!=null){string saved;map.custom_data.get(RateKey,out saved,"1");double parsed;if(Double.TryParse(saved,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out parsed)&&Finite(parsed)&&parsed>0){rate=parsed;GodEconomy.SetRate(rate);}}}return map;}
+ static bool Finite(double x){return !Double.IsNaN(x)&&!Double.IsInfinity(x);}
+ static Entry Get(City city){if(city==null)return null;var map=Map();Entry e;if(entries.TryGetValue(city.data.id,out e)&&System.Object.ReferenceEquals(e.city,city))return e;string raw;city.data.get(StateKey,out raw,"");GodEconomyState s=null;try{if(raw.Length>0)s=JsonConvert.DeserializeObject<GodEconomyState>(raw);}catch(Exception ex){Debug.LogWarning("GodWorld saved economy: "+ex.Message);}if(s==null)s=new GodEconomyState();if(s.sectorWorkers==null||s.sectorWorkers.Length!=4)s.sectorWorkers=new int[4];int year;city.data.get("godworld.lastYear",out year,map==null?0:map.year);e=new Entry{city=city,state=s,year=year,fraction=ReadDouble(city.data,"godworld.gold.fraction")};entries[city.data.id]=e;return e;}
+ static Kingdom KingdomOf(City city){return city==null?null:(Kingdom)kingdomField.GetValue(city);}
+ static long Reserve(City city){long n;city.data.get(ReserveKey,out n,0L);return Math.Max(0,n);}
+ public static int ResourceTotal(City city,string id,int original){if(city==null||id!="gold")return original;return (int)Math.Min(Int32.MaxValue,(long)Math.Max(0,original)+Reserve(city));}
+ public static int DrainReserve(City city,string id,int amount){if(city==null||id!="gold"||amount<=0)return amount;long n=Reserve(city),spent=Math.Min(n,amount);if(spent>0)city.data.set(ReserveKey,n-spent);return amount-(int)spent;}
+ public static double GetGold(City city){return city==null?0:Math.Max(0,city.getResourcesAmount("gold"));}
+ public static double GetGod(City city){var e=Get(city);return e==null?0:e.state.treasury.god;}
+ public static GodEconomyState State(City city){var e=Get(city);return e==null?null:e.state;}
+ public static void Dirty(City city){eDirty(city);}
+ public static Kingdom Nation(City city){return KingdomOf(city);}
+ public static int Year(){var map=Map();return map==null?0:map.year;}
+ public static double Attribute(Actor actor,string id){return actor==null?0:Stats(actor)[id];}
+ public static bool CanPayPublic(City city,int amount){return city!=null&&amount>=0&&GetGold(city)>=amount;}
+ public static bool EnsurePublicLiquidity(City city,int amount){return CanPayPublic(city,amount);}
+ public static bool TryDebitPublic(City city,int amount){
+  if(!EnsurePublicLiquidity(city,amount))return false;if(amount==0)return true;
+  double before=GetGold(city);city.takeResource("gold",amount);double paid=before-GetGold(city);
+  if(paid!=amount){Gold(city,GetGold(city)+paid);return false;}var e=Get(city);e.state.treasury.gold=GetGold(city);e.dirty=true;return true;
+ }
+ public static bool CreditPublic(City city,int amount){if(city==null||amount<0||!Gold(city,GetGold(city)+amount))return false;var e=Get(city);e.state.treasury.gold=GetGold(city);e.dirty=true;return true;}
+ public static void CreditBusiness(City city,int amount){if(city==null||amount<=0)return;var e=Get(city);e.state.business.gold+=amount;e.state.salesReceipts+=amount;e.dirty=true;}
+ public static double GetRate(){Map();return rate;}
+ public static void SetRate(double value){var map=Map();if(!Finite(value)||value<=0||!GodEconomy.SetRate(value))return;rate=value;if(map!=null){if(map.custom_data==null)map.custom_data=new SaveCustomData();map.custom_data.set(RateKey,rate.ToString("R",System.Globalization.CultureInfo.InvariantCulture));}}
+ static bool Gold(City city,double target){if(!Finite(target)||target<0||target>Int32.MaxValue)return false;int whole=(int)Math.Floor(target),old=(int)GetGold(city);if(whole>old)city.data.set(ReserveKey,Reserve(city)+(long)(whole-old));else if(whole<old)city.takeResource("gold",old-whole);return (int)GetGold(city)==whole;}
+ public static void Issue(City city,bool god,double amount){var e=Get(city);if(e==null||!Finite(amount))return;e.state.treasury.gold=GetGold(city);bool ok=god?(amount>=0?GodEconomy.Issue(e.state.treasury,true,amount):GodEconomy.Burn(e.state.treasury,true,-amount)):Gold(city,e.state.treasury.gold+amount);if(!ok)return;e.state.treasury.gold=GetGold(city);e.dirty=true;Save(e);}
+ public static void Exchange(City city,bool goldToGod,double amount){ExchangeCore(city,goldToGod,amount,true);}
+ static void ExchangeCore(City city,bool goldToGod,double amount,bool save){var e=Get(city);if(e==null)return;GodEconomy.SetRate(GetRate());double oldGold=GetGold(city),oldGod=e.state.treasury.god;e.state.treasury.gold=oldGold;if(!GodEconomy.Exchange(e.state.treasury,!goldToGod,amount))return;double result=e.state.treasury.gold;double nearest=Math.Round(result);if(Math.Abs(result-nearest)<1e-9)result=nearest;if(!Gold(city,result)){e.state.treasury.gold=oldGold;e.state.treasury.god=oldGod;return;} // Fractional gold remains credited, never discarded.
+  double fraction=result-Math.Floor(result);if(fraction>0)e.state.treasury.god+=fraction/rate;e.state.treasury.gold=GetGold(city);e.dirty=true;if(save)Save(e);}
+ public static int GetEra(City city){var e=Get(city);if(e==null)return 0;var k=KingdomOf(city);int nation=0;if(k!=null)k.data.get("godworld.nation.era",out nation,0);return Math.Max(nation,e.state.era);}
+ public static string Describe(City city){var e=Get(city);if(e==null)return "";var s=e.state;return GodEconomy.EraNames[Math.Max(0,Math.Min(8,s.era))]+" · 满意 "+s.satisfaction.ToString("0")+" · 忠诚 "+s.loyalty.ToString("0")+" · 战争 "+s.warLevel;}
+ public static string DescribeActor(Actor actor){if(actor==null)return "";var d=(ActorData)actor.getData();double god=ReadDouble(d,"godworld.personal.god");return d.money+" 金币 / "+god.ToString("0.##")+" GOD";}
+ public static string DescribeFamily(Family family){if(family==null)return "";long coins=0;double gods=ReadDouble(family.data,"godworld.family.god");foreach(var a in family.units){if(a==null||!a.isAlive())continue;var d=(ActorData)a.getData();coins+=Math.Max(0,d.money);gods+=ReadDouble(d,"godworld.personal.god");}long estate;family.data.get("godworld.family.gold",out estate,0L);return (coins+estate)+" 金币 / "+gods.ToString("0.##")+" god · "+family.units.Count+" 人";}
+ static double ReadDouble(BaseSystemData d,string key){string text;d.get(key,out text,"0");double x;return Double.TryParse(text,System.Globalization.NumberStyles.Float,System.Globalization.CultureInfo.InvariantCulture,out x)&&Finite(x)&&x>=0?x:0;}
+ static void WriteDouble(BaseSystemData d,string key,double x){d.set(key,Math.Max(0,x).ToString("R",System.Globalization.CultureInfo.InvariantCulture));}
+ static void Save(Entry e){if(e==null)return;e.city.data.set(StateKey,JsonConvert.SerializeObject(e.state));e.city.data.set("godworld.lastYear",e.year);WriteDouble(e.city.data,"godworld.gold.fraction",e.fraction);e.dirty=false;}
+ public static void Flush(){foreach(var e in entries.Values)if(e.dirty)Save(e);}
+ public static void TickCity(City city,float delta){if(busy||city==null||delta<=0)return;var world=World.world;if(world==null)return;var map=Map();if(map==null)return;NativeLifecycle.Step(city);var e=Get(city);if(NativeLifecycle.Scanning(city)||map.year<=e.year)return;busy=true;try{e.year++;var s=e.state;s.treasury.gold=GetGold(city);double beforeGold=s.treasury.gold;
+  int wood=Math.Max(0,city.getResourcesAmount("wood")),stone=Math.Max(0,city.getResourcesAmount("stone")),metal=Math.Max(0,city.getResourcesAmount("common_metals"));s.resources=(double)wood+stone+metal;double beforeResources=s.resources;
+  var kingdom=KingdomOf(city);bool war=kingdom!=null&&IsAtWar(kingdom);double kingAggression=0;if(kingdom!=null&&kingdom.king!=null)kingAggression=Math.Max(0,Stats(kingdom.king)["warfare"]);
+  GodEconomy.SetRate(GetRate());GodEconomy.Tick(s,Math.Max(0,city.status.population_adults),city.countWarriors(),war,kingAggression);
+  int spent=(int)Math.Min(Int32.MaxValue,Math.Ceiling(Math.Max(0,beforeResources-s.resources)));int n=Math.Min(wood,spent);city.takeResource("wood",n);spent-=n;n=Math.Min(stone,spent);city.takeResource("stone",n);spent-=n;n=Math.Min(metal,spent);city.takeResource("common_metals",n);
+  double target=s.treasury.gold+e.fraction;Gold(city,target);e.fraction=target-Math.Floor(target); // Carry fractional tax income, not a second gold ledger.
+  float speed=(float)(1+Math.Log(1+s.infrastructure)*.08+Math.Max(0,s.era)*.12);speed=Math.Min(8,speed);float timer=(float)buildTimer.GetValue(city);if(timer>0)buildTimer.SetValue(city,timer/speed);
+  if(city.leader!=null){NativeProgression.CompletedWork(city.leader,3,1);if(s.satisfaction<35&&map.year%8==0)city.removeLeader();}
+  AdvanceNation(kingdom);NativeLifecycle.StartYear(city,e.year);e.dirty=true;Save(e);
+ }catch(Exception ex){Debug.LogWarning("GodWorld city economy: "+ex.Message);}finally{busy=false;}}
+ static void eDirty(City city){var e=Get(city);if(e!=null)e.dirty=true;}
+ static int PayActor(Actor actor,GodWallet source,int wanted){var d=(ActorData)actor.getData();int paid=(int)Math.Min(Math.Min(Math.Max(0,wanted),Math.Max(0,Math.Floor(source.gold))),Int32.MaxValue-Math.Max(0,d.money));if(paid>0){source.gold-=paid;d.money+=paid;}return paid;}
+ public static void RewardWork(Actor a,int role,int work){
+  if(a==null||!a.isAlive()||work<=0)return;var city=a.getCity();var e=Get(city);if(e==null)return;var d=(ActorData)a.getData();int wanted=1+NativeProgression.Ability(a,role)/4;
+  if(role==2){e.state.readingWork+=work/ (20.0/3);PayActor(a,e.state.education,wanted);}
+  if(role==0)e.state.practiceWork+=work;
+  // Gold production wages are already funded at the native income event.
+  e.dirty=true;
+ }
+ public static int Loyalty(City city,int original){original=NativeLifecycle.Loyalty(city,original);var e=Get(city);if(e==null)return original;return Math.Max(-1000,original-(int)Math.Round((100-e.state.loyalty)*.8));}
+ public static Actor ChooseLeader(City city,Actor original){var e=Get(city);if(e==null||e.state.satisfaction>=40||city.hasLeader())return original;Actor best=original;double score=original==null?-1:NativeProgression.Ability(original,3);foreach(var a in city.units){if(a==null||!a.isAlive()||a.isBaby()||a.isKing()||a.isCityLeader())continue;double candidate=NativeProgression.Ability(a,3)+Stats(a)["stewardship"]*.05;if(candidate>score){best=a;score=candidate;}}return best;}
+ public static int WarManpower(City city,Kingdom kingdom,int original){return NativeLifecycle.Target(city);}
+ public static void BeforeDeath(Actor actor){if(actor==null||!actor.isAlive()||actor.family==null)return;var data=(ActorData)actor.getData();var f=actor.family;long estate;f.data.get("godworld.family.gold",out estate,0L);long wealth=estate+Math.Max(0,data.money);double god=ReadDouble(f.data,"godworld.family.god")+ReadDouble(data,"godworld.personal.god");data.money=0;WriteDouble(data,"godworld.personal.god",0);var heirs=new List<Actor>();foreach(var a in actor.getChildren(false))if(a!=null&&a.isAlive()&&!heirs.Contains(a))heirs.Add(a);if(heirs.Count==0)foreach(var a in f.units)if(a!=null&&a!=actor&&a.isAlive())heirs.Add(a);for(int i=0;i<heirs.Count;i++){var d=(ActorData)heirs[i].getData();int amount=(int)Math.Min(Int32.MaxValue-Math.Max(0,d.money),wealth/(heirs.Count-i));d.money+=amount;wealth-=amount;double grant=god/(heirs.Count-i);double old=ReadDouble(d,"godworld.personal.god");if(Finite(old+grant)){WriteDouble(d,"godworld.personal.god",old+grant);god-=grant;}}f.data.set("godworld.family.gold",wealth);WriteDouble(f.data,"godworld.family.god",god);}
+ public static int SafeResourceDelta(CityResources stock,string id,int delta){int old=Math.Max(0,stock.get(id));return delta>=0?Math.Min(delta,Int32.MaxValue-old):Math.Max(delta,-old);}
+ public static void UnlockResources(ResourceLibrary library){foreach(var asset in library.list){asset.maximum=Int32.MaxValue;asset.storage_max=Int32.MaxValue;}}
+ public static bool MapAllowed(int size){return size>0&&MapSizeLibrary.getPresetAsset(size)!=null;}
+ public static void CombatWork(Actor actor){NativeProgression.CompletedWork(actor,4,3);}
+ static void AdvanceNation(Kingdom k){if(k==null)return;int current;k.data.get("godworld.nation.era",out current,0);double infra=0,knowledge=0,industry=0,commerce=0,governance=0;int buildings=0,population=0;foreach(var city in k.cities){var e=Get(city);if(e==null)continue;infra+=e.state.infrastructure;knowledge+=e.state.knowledge;industry+=e.state.production;commerce+=e.state.commerce;governance+=e.state.governance;buildings+=city.countBuildings();population+=city.getPopulationPeople();}int next=current+1;if(next<=8&&k.cities.Exists(c=>NativeLifecycle.EraReady(c,next))&&infra>=Math.Pow(2,next)*2&&knowledge>=Math.Pow(2,next)&&industry>=next*.1&&commerce>=next*.025&&governance>=next*.02&&buildings>=next&&population>=next*4){current=next;k.data.set("godworld.nation.era",current);if(k.culture!=null){if(current>=2){k.culture.addTrait("roads",false);k.culture.addTrait("architecture",false);}if(current>=3)k.culture.addTrait("weaponsmith_mastery",false);if(current>=5)k.culture.addTrait("fast_learners",false);}}
+ }
+ public static int Deliver(City city,string resource,int amount,Actor actor){int before=city.getResourcesAmount(resource);int result=city.addResourcesToRandomStockpile(resource,amount);int received=Math.Max(0,city.getResourcesAmount(resource)-before);NativeProgression.AfterDelivery(actor,received);NativeLifecycle.Delivered(city,received);return result;}
+
+ static int LaborCost(City city,ConstructionCost cost){if(city.countBuildings()<2||cost==null)return 0;var e=Get(city);double price=e==null?1:Math.Max(.05,Math.Min(1000000,e.state.inflation));return (int)Math.Min(Int32.MaxValue,Math.Max(1,((long)Math.Max(0,cost.wood)+Math.Max(0,cost.stone)+Math.Max(0,cost.common_metals))/10.0*price));}
+ public static bool CanFundCost(City city,ConstructionCost cost,bool original){return original&&GetGold(city)>=(double)Math.Max(0,cost.gold)+LaborCost(city,cost);}
+ public static void PayConstruction(City city,ConstructionCost cost){int fee=LaborCost(city,cost);if(fee<=0)return;var e=Get(city);double before=GetGold(city);city.takeResource("gold",fee);double paid=before-GetGold(city);CreditBusiness(city,(int)Math.Max(0,paid));e.state.treasury.gold=GetGold(city);e.dirty=true;}
+ public static void BeginCityUpdate(City city,float delta){if(city==null||delta<=0)return;var e=Get(city);if(e==null)return;var s=e.state;double speed=1+Math.Log(1+Math.Max(0,s.infrastructure))*.08+Math.Log(1+Math.Max(0,s.treasury.gold)/Math.Max(1,city.status.population))*.04;if(!Finite(speed))return;float bonus=(float)(delta*Math.Max(0,speed-1));float build=(float)buildTimer.GetValue(city);if(build>0)buildTimer.SetValue(city,Math.Max(0,build-bonus));if(city.timer_action>0)city.timer_action=Math.Max(0,city.timer_action-bonus);if(s.lastArmyPaid>0){float timer=(float)warriorTimer.GetValue(city);if(timer>0)warriorTimer.SetValue(city,Math.Max(0,timer-(float)(delta*s.warLevel*.08)));}}
+
+ // Only newly earned native production income needs funding. Native taxes,
+ // loot transfers and loot-to-cash settlement must never charge a second payer.
+ public static int FundNativeIncome(Actor actor,int amount){
+  if(actor==null||amount<=0)return 0;var city=actor.getCity();if(city==null)return 0;var e=Get(city);var d=(ActorData)actor.getData();
+  int wanted=(int)Math.Min(amount,Int32.MaxValue-(long)Math.Max(0,d.loot));int remaining=wanted;
+  int payroll=(int)Math.Min(remaining,Math.Max(0,Math.Floor(e.state.households.gold)));e.state.households.gold-=payroll;remaining-=payroll;
+  int commercial=(int)Math.Min(remaining,Math.Max(0,Math.Floor(e.state.business.gold)));e.state.business.gold-=commercial;remaining-=commercial;
+  int publicWage=(int)Math.Min(remaining,GetGold(city));double before=GetGold(city);city.takeResource("gold",publicWage);publicWage=(int)Math.Max(0,before-GetGold(city));
+  e.state.wagesPaid+=payroll+commercial;e.state.treasury.gold=GetGold(city);e.dirty=true;return payroll+commercial+publicWage;
+ }
+ public static void EarnNativeIncome(Actor actor,int amount){int paid=FundNativeIncome(actor,amount);NativeLifecycle.RecordWork(actor,amount,paid);if(paid>0){actor.addLoot(paid);NativeProgression.CompletedWork(actor,0,1);}}
+ public static int PrepareGift(int amount,Actor giver,Actor receiver){
+  if(giver==null||receiver==null||System.Object.ReferenceEquals(giver,receiver)||amount<=0)return 0;
+  var from=(ActorData)giver.getData();var to=(ActorData)receiver.getData();
+  int paid=(int)Math.Min(Math.Min(amount,Math.Max(0,from.money)),Int32.MaxValue-(long)Math.Max(0,to.money));from.money-=paid;return paid;
+ }
+ public static void SpendCommerce(Actor actor,int amount){SpendNative(actor,amount,false);}
+ public static void SpendPolitics(Actor actor,int amount){SpendNative(actor,amount,true);}
+ static void SpendNative(Actor actor,int amount,bool political){
+  if(actor==null||amount<=0)return;var data=(ActorData)actor.getData();int paid=NativeLifecycle.LiquidPayment(actor,amount);if(paid==0)return;
+  int before=data.money;actor.spendMoney(paid);paid=Math.Max(0,before-data.money);
+  var city=actor.getCity();var e=Get(city);if(e!=null){if(political)e.state.politics.gold+=paid;else{e.state.business.gold+=paid;e.state.salesReceipts+=paid;NativeProgression.CompletedWork(actor,1,1);}e.dirty=true;}
+ }
+ public static int SaturatingResourceSum(int a,int b){return (int)Math.Max(0,Math.Min(Int32.MaxValue,(long)Math.Max(0,a)+Math.Max(0,b)));}
+
+ public static void EnsureBuildLiquidity(City city,ConstructionCost cost){}
+
+
+}
